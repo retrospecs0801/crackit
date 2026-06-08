@@ -1,51 +1,57 @@
 'use client';
 
-import { Mic, MicOff, Video, VideoOff, LogOut } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useTrackToggle } from '@livekit/components-react'
+import { Track } from 'livekit-client'
+import { useRouter } from 'next/navigation'
+import { LogOut, Mic, MicOff, Video, VideoOff } from 'lucide-react'
 
-interface MediaControlsProps {
-  isMuted: boolean;
-  isCamOff: boolean;
-  onToggleMute: () => void;
-  onToggleCam: () => void;
-}
-
-export function MediaControls({ isMuted, isCamOff, onToggleMute, onToggleCam }: MediaControlsProps) {
-  const router = useRouter();
+export default function MediaControls() {
+  const router = useRouter()
+  const { buttonProps: micProps, enabled: micEnabled } = useTrackToggle({ source: Track.Source.Microphone })
+  const { buttonProps: camProps, enabled: camEnabled } = useTrackToggle({ source: Track.Source.Camera })
 
   return (
-    <div className="absolute bottom-5 left-1/2 -translate-x-1/2 bg-canvas border border-ink shadow-[2px_2px_0px_var(--color-ink)] px-5 py-2.5 flex items-center gap-3 z-50">
-      
+    <div
+      style={{
+        position: 'absolute',
+        bottom: '20px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 10,
+        boxShadow: '2px 2px 0px #2D2A26'
+      }}
+      className="bg-[#F4F0EB] border border-[#2D2A26] flex items-center gap-3 px-5 py-2"
+    >
       <button
-        onClick={onToggleMute}
-        className={`w-10 h-10 flex items-center justify-center border border-ink transition-colors ${
-          isMuted ? 'bg-accent text-white' : 'bg-transparent text-ink hover:bg-surface'
-        }`}
-        title={isMuted ? "Unmute" : "Mute"}
+        {...micProps}
+        className="w-10 h-10 border border-[#2D2A26] flex items-center justify-center"
+        style={{ background: micEnabled ? 'transparent' : '#BC6C4F' }}
       >
-        {isMuted ? <MicOff size={18} /> : <Mic size={18} />}
+        {micEnabled
+          ? <Mic size={18} color="#2D2A26" />
+          : <MicOff size={18} color="#F4F0EB" />
+        }
       </button>
 
       <button
-        onClick={onToggleCam}
-        className={`w-10 h-10 flex items-center justify-center border border-ink transition-colors ${
-          isCamOff ? 'bg-accent text-white' : 'bg-transparent text-ink hover:bg-surface'
-        }`}
-        title={isCamOff ? "Turn on camera" : "Turn off camera"}
+        {...camProps}
+        className="w-10 h-10 border border-[#2D2A26] flex items-center justify-center"
+        style={{ background: camEnabled ? 'transparent' : '#BC6C4F' }}
       >
-        {isCamOff ? <VideoOff size={18} /> : <Video size={18} />}
+        {camEnabled
+          ? <Video size={18} color="#2D2A26" />
+          : <VideoOff size={18} color="#F4F0EB" />
+        }
       </button>
-
-      <div className="w-[1px] h-6 bg-ink/20 mx-1"></div>
 
       <button
         onClick={() => router.push('/')}
-        className="h-10 flex items-center justify-center gap-2 px-4 border border-ink bg-transparent text-ink hover:bg-ink hover:text-white transition-colors font-sans text-[12px]"
+        className="border border-[#2D2A26] flex items-center gap-2 px-3 h-10 text-sm"
+        style={{ fontFamily: 'var(--font-geist)', fontSize: '12px' }}
       >
-        <LogOut size={16} />
-        <span>Leave</span>
+        <LogOut size={14} />
+        Leave
       </button>
-
     </div>
-  );
+  )
 }
