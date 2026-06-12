@@ -1,5 +1,7 @@
 import { User } from '@/types';
 import { MicOff, VideoOff } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useDataChannel } from '@livekit/components-react';
 
 interface VideoTileProps {
   user: User;
@@ -13,6 +15,19 @@ export function VideoTile({ user, seatNumber, isOwner, isMuted, isCamOff }: Vide
   // Mock cam-off state for some non-local users if not explicitly provided
   const displayCamOff = isCamOff ?? (seatNumber % 3 === 0);
   const displayMicOff = isMuted ?? true; // All others muted by default in this study room mock
+
+  const [isPlayingYouTube, setIsPlayingYouTube] = useState(false);
+  const { message } = useDataChannel('youtube-status');
+
+  useEffect(() => {
+    if (!message) return;
+    try {
+      const payload = JSON.parse(new TextDecoder().decode(message.payload));
+      if (payload.type === 'PLAYING' && payload.userId === user.displayName) {
+        setIsPlayingYouTube(true);
+      }
+    } catch(e) {}
+  }, [message, user.displayName]);
 
   return (
     <div 
@@ -44,11 +59,22 @@ export function VideoTile({ user, seatNumber, isOwner, isMuted, isCamOff }: Vide
       </div>
 
       {/* Bottom Nameplate */}
-      <div className="absolute left-2 bottom-2 bg-ink/75 text-white font-mono text-[11px] px-2 py-[3px] flex items-center gap-1.5 backdrop-blur-sm">
-        {isOwner && (
-          <span className="text-accent font-bold">HOST</span>
+      <div className="absolute left-2 bottom-2 flex flex-col gap-1 items-start">
+        <div className="bg-ink/75 text-white font-mono text-[11px] px-2 py-[3px] flex items-center gap-1.5 backdrop-blur-sm">
+          {isOwner && (
+            <span className="text-accent font-bold">HOST</span>
+          )}
+          <span>{user.displayName}</span>
+        </div>
+        
+        {isPlayingYouTube && (
+          <div 
+            className="font-mono text-[10px]"
+            style={{ backgroundColor: 'rgba(26,26,26,0.8)', color: '#7A8B76', borderRadius: '4px', padding: '2px 6px', fontFamily: '"JetBrains Mono", monospace' }}
+          >
+            ▶ YouTube
+          </div>
         )}
-        <span>{user.displayName}</span>
       </div>
     </div>
   );

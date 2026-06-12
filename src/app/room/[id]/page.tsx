@@ -8,10 +8,11 @@ import '@livekit/components-styles';
 import { RoomNavbar } from '@/components/layout/RoomNavbar';
 import { PomodoroTimer } from '@/components/room/PomodoroTimer';
 import { ChatSidebar } from '@/components/room/ChatSidebar';
+import { AppsTray } from '@/components/room/AppsTray';
 import  VideoGrid  from '@/components/room/VideoGrid';
 import  MediaControls  from '@/components/room/MediaControls';
 import { mockRooms } from '@/lib/mockData';
-import { getRoomFromStorage, getAvatarColor, saveRoomToStorage } from '@/lib/utils';
+import { getAvatarColor } from '@/lib/utils';
 import { Room, User } from '@/types';
 import { DisplayNameModal } from '@/components/room/DisplayNameModal';
 
@@ -23,6 +24,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [roomData, setRoomData] = useState<Room | null>(null);
   const [isNotFound, setIsNotFound] = useState(false);
+  const [activeTab, setActiveTab] = useState<'focus' | 'apps'>('focus');
 
   const [livekitToken, setLivekitToken] = useState<string | null>(null);
   const [tokenError, setTokenError] = useState<string | null>(null);
@@ -64,12 +66,24 @@ export default function RoomPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     const fetchRoom = async () => {
+      // 1. Check sessionStorage first — available immediately for the room creator
+      //    without racing against LiveKit API propagation delay
+      try {
+        const cached = sessionStorage.getItem(`crackit_room_${params.id}`);
+        if (cached) {
+          setRoomData(JSON.parse(cached));
+          return;
+        }
+      } catch {}
+
+      // 2. Check mock rooms
       const mockRoom = mockRooms.find(r => r.id === params.id);
       if (mockRoom) {
         setRoomData(mockRoom);
         return;
       }
       
+      // 3. Fetch from LiveKit API (for users joining via shared link)
       try {
         const res = await fetch('/api/rooms');
         if (res.ok) {
@@ -84,7 +98,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
         console.error('Error fetching live rooms:', e);
       }
       
-      // Create fallback room for new browsers joining via shared link if livekit fetch fails or room is new
+      // 4. Fallback for unknown rooms (joined via link before any participant joined)
       const fallbackRoom: Room = {
         id: params.id,
         name: `Room ${params.id.substring(0, 8)}`,
@@ -237,14 +251,62 @@ export default function RoomPage({ params }: { params: { id: string } }) {
             {/* Sidebar */}
             <div 
               className={`
-                fixed inset-0 z-40 top-[52px] bg-canvas flex flex-col border-l-0 border-ink md:static md:w-[320px] md:min-w-[320px] md:border-l md:z-0
+                fixed inset-0 z-40 top-[52px] flex flex-col md:static md:w-[300px] md:min-w-[300px] md:z-0
                 transition-transform duration-300
                 ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
               `}
+              style={{ backgroundColor: '#1A1A1A', borderLeft: '1px solid #333333' }}
             >
-              <PomodoroTimer />
-              <div className="flex-1 min-h-0">
-                <ChatSidebar roomId={roomData.id} />
+              {/* Tab Bar */}
+              <div className="flex w-full shrink-0" style={{ height: '44px', borderBottom: '1px solid #333333', backgroundColor: '#1A1A1A' }}>
+                <button
+                  onClick={() => setActiveTab('focus')}
+                  className="flex-1 flex items-center justify-center font-sans text-[13px] transition-all duration-150"
+                  style={{
+                    color: activeTab === 'focus' ? '#E8E8E8' : '#888888',
+                    borderBottom: activeTab === 'focus' ? '2px solid #7A8B76' : '2px solid transparent',
+                    opacity: activeTab === 'focus' ? 1 : 0.7,
+                    transform: activeTab === 'focus' ? 'translateY(0)' : 'translateY(1px)'
+                  }}
+                >
+                  Focus
+                </button>
+                <button
+                  onClick={() => setActiveTab('apps')}
+                  className="flex-1 flex items-center justify-center font-sans text-[13px] transition-all duration-150"
+                  style={{
+                    color: activeTab === 'apps' ? '#E8E8E8' : '#888888',
+                    borderBottom: activeTab === 'apps' ? '2px solid #7A8B76' : '2px solid transparent',
+                    opacity: activeTab === 'apps' ? 1 : 0.7,
+                    transform: activeTab === 'apps' ? 'translateY(0)' : 'translateY(1px)'
+                  }}
+                >
+                  Apps
+                </button>
+              </div>
+
+              {/* Tab Content — always mounted, hidden via display to preserve timer & chat state */}
+              <div className="flex-1 min-h-0 flex flex-col relative overflow-hidden">
+                {/* Focus Tab */}
+                <div
+                  className="absolute inset-0 flex flex-col"
+                  style={{ display: activeTab === 'focus' ? 'flex' : 'none' }}
+                >
+                  <div style={{ backgroundColor: '#242424', borderRadius: '8px', border: '1px solid #333333', margin: '12px', padding: '16px' }}>
+                    <PomodoroTimer isOwner={currentUser?.displayName === roomData?.ownerId} currentUserId={currentUser?.displayName ?? ''} />
+                  </div>
+                  <div className="flex-1 min-h-0" style={{ padding: '0 12px 12px' }}>
+                    <ChatSidebar roomId={roomData.id} />
+                  </div>
+                </div>
+                
+                {/* Apps Tab */}
+                <div
+                  className="absolute inset-0 flex flex-col"
+                  style={{ display: activeTab === 'apps' ? 'flex' : 'none' }}
+                >
+                  <AppsTray roomId={roomData.id} currentUserId={currentUser?.displayName ?? ''} />
+                </div>
               </div>
             </div>
           </LiveKitRoom>

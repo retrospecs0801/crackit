@@ -93,7 +93,13 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
       maxStudents: Number(maxStudents),
       currentStudents: 1,
       members: [],
-      ownerId: 'local-user',
+      ownerId: (() => {
+        try {
+          const stored = localStorage.getItem('studyhall_current_user');
+          if (stored) return JSON.parse(stored).displayName;
+        } catch {}
+        return 'anonymous';
+      })(),
       createdAt: new Date().toISOString()
     };
     
@@ -107,6 +113,12 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
       if (!res.ok) {
         throw new Error('Failed to create room');
       }
+      
+      // Cache room in sessionStorage so the room page can immediately identify the owner
+      // without racing against the LiveKit API propagation delay
+      try {
+        sessionStorage.setItem(`crackit_room_${room.id}`, JSON.stringify(room));
+      } catch {}
       
       onClose();
       router.push(`/room/${room.id}`);
