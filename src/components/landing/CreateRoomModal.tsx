@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ExamTag, Room } from '@/types';
-import { saveRoomToStorage } from '@/lib/utils';
 
 interface CreateRoomModalProps {
   isOpen: boolean;
@@ -36,7 +35,7 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const form = e.target as HTMLFormElement;
@@ -98,10 +97,23 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
       createdAt: new Date().toISOString()
     };
     
-    saveRoomToStorage(room);
-    
-    onClose();
-    router.push(`/room/${room.id}`);
+    try {
+      const res = await fetch('/api/rooms/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(room)
+      });
+      
+      if (!res.ok) {
+        throw new Error('Failed to create room');
+      }
+      
+      onClose();
+      router.push(`/room/${room.id}`);
+    } catch (error) {
+      console.error('Error creating room:', error);
+      alert('Could not create room. Please try again.');
+    }
   };
 
   const inputStyles = "w-full border border-ink bg-white font-sans text-[14px] px-3 py-2 text-ink outline-none focus:border-[2px] focus:p-[7px] placeholder:text-ink/40";

@@ -10,6 +10,7 @@ export function RoomCard({ room }: { room: Room }) {
   const extraMembers = room.members.length - 4;
 
   const handleJoin = () => {
+    if (room.isMock) return;
     router.push(`/room/${room.id}`);
   };
 
@@ -70,9 +71,14 @@ export function RoomCard({ room }: { room: Room }) {
         
         <button
           onClick={handleJoin}
-          className="border border-ink bg-transparent text-ink font-sans text-[13px] px-3 py-1 hover:bg-ink hover:text-white transition-colors"
+          disabled={room.isMock}
+          className={`border border-ink font-sans text-[13px] px-3 py-1 transition-colors ${
+            room.isMock 
+              ? 'bg-canvas text-ink/50 cursor-not-allowed' 
+              : 'bg-transparent text-ink hover:bg-ink hover:text-white'
+          }`}
         >
-          Join Room
+          {room.isMock ? 'Demo Only' : 'Join Room'}
         </button>
       </div>
       

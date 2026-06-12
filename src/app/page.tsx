@@ -7,7 +7,6 @@ import { ExamFilterBar } from '@/components/landing/ExamFilterBar';
 import { RoomGrid } from '@/components/landing/RoomGrid';
 import { CreateRoomModal } from '@/components/landing/CreateRoomModal';
 import { mockRooms } from '@/lib/mockData';
-import { getRoomsFromStorage } from '@/lib/utils';
 import { ExamTag, Room } from '@/types';
 
 type FilterType = ExamTag | 'ALL';
@@ -17,12 +16,20 @@ export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [allRooms, setAllRooms] = useState<Room[]>(mockRooms);
 
-  const refreshRooms = () => {
-    const stored = getRoomsFromStorage();
-    const storedRooms = Object.values(stored);
-    const mergedIds = new Set(mockRooms.map(r => r.id));
-    const newRooms = storedRooms.filter(r => !mergedIds.has(r.id));
-    setAllRooms([...newRooms, ...mockRooms]);
+  const refreshRooms = async () => {
+    try {
+      const res = await fetch('/api/rooms');
+      if (res.ok) {
+        const liveRooms = await res.json();
+        setAllRooms([...mockRooms, ...liveRooms]);
+      } else {
+        console.error('Failed to fetch live rooms');
+        setAllRooms(mockRooms);
+      }
+    } catch (e) {
+      console.error(e);
+      setAllRooms(mockRooms);
+    }
   };
 
   useEffect(() => {

@@ -11,7 +11,7 @@ import { ChatSidebar } from '@/components/room/ChatSidebar';
 import  VideoGrid  from '@/components/room/VideoGrid';
 import  MediaControls  from '@/components/room/MediaControls';
 import { mockRooms } from '@/lib/mockData';
-import { getRoomFromStorage, getAvatarColor } from '@/lib/utils';
+import { getRoomFromStorage, getAvatarColor, saveRoomToStorage } from '@/lib/utils';
 import { Room, User } from '@/types';
 import { DisplayNameModal } from '@/components/room/DisplayNameModal';
 
@@ -46,10 +46,8 @@ export default function RoomPage({ params }: { params: { id: string } }) {
   }
 
   useEffect(() => {
-    let abortFn: (() => void) | null = null;
     try {
       const stored = localStorage.getItem('studyhall_current_user');
-      let resolvedUser = null;
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed && !parsed.avatarColor) {
@@ -58,26 +56,67 @@ export default function RoomPage({ params }: { params: { id: string } }) {
           localStorage.setItem('studyhall_current_user', JSON.stringify(parsed));
         }
         setCurrentUser(parsed);
-        resolvedUser = parsed;
-      }
-
-      let resolvedRoomData = getRoomFromStorage(params.id);
-      if (!resolvedRoomData) {
-        resolvedRoomData = mockRooms.find(r => r.id === params.id) || null;
-      }
-
-      if (resolvedRoomData && resolvedUser) {
-        fetchToken(resolvedRoomData.id, resolvedUser.displayName).then(cleanup => {
-  abortFn = cleanup ?? null;
-});
       }
     } catch (e) {
       console.error(e);
     }
+  }, []);
+
+  useEffect(() => {
+    const fetchRoom = async () => {
+      const mockRoom = mockRooms.find(r => r.id === params.id);
+      if (mockRoom) {
+        setRoomData(mockRoom);
+        return;
+      }
+      
+      try {
+        const res = await fetch('/api/rooms');
+        if (res.ok) {
+          const liveRooms: Room[] = await res.json();
+          const found = liveRooms.find(r => r.id === params.id);
+          if (found) {
+            setRoomData(found);
+            return;
+          }
+        }
+      } catch (e) {
+        console.error('Error fetching live rooms:', e);
+      }
+      
+      // Create fallback room for new browsers joining via shared link if livekit fetch fails or room is new
+      const fallbackRoom: Room = {
+        id: params.id,
+        name: `Room ${params.id.substring(0, 8)}`,
+        examTag: 'OTHER',
+        topic: 'Joined via link',
+        description: 'A room joined via shared link.',
+        maxStudents: 10,
+        currentStudents: 1,
+        members: [],
+        ownerId: 'unknown',
+        createdAt: new Date().toISOString()
+      };
+      
+      setRoomData(fallbackRoom);
+    };
+
+    fetchRoom();
+  }, [params.id]);
+
+  useEffect(() => {
+    let abortFn: (() => void) | null = null;
+    
+    if (roomData && currentUser && !livekitToken) {
+      fetchToken(roomData.id, currentUser.displayName).then(cleanup => {
+        abortFn = cleanup ?? null;
+      });
+    }
+    
     return () => {
       if (abortFn) abortFn();
     };
-  }, [params.id]);
+  }, [roomData, currentUser, livekitToken]);
 
   useEffect(() => {
     if (livekitToken) {
@@ -86,22 +125,6 @@ export default function RoomPage({ params }: { params: { id: string } }) {
       return () => clearTimeout(timer);
     }
   }, [livekitToken]);
-
-  useEffect(() => {
-    const storedRoom = getRoomFromStorage(params.id);
-    if (storedRoom) {
-      setRoomData(storedRoom);
-      return;
-    }
-    
-    const mockRoom = mockRooms.find(r => r.id === params.id);
-    if (mockRoom) {
-      setRoomData(mockRoom);
-      return;
-    }
-    
-    setIsNotFound(true);
-  }, [params.id]);
 
   const localUserId = 'u1';
 

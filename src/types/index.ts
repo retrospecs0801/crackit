@@ -18,6 +18,7 @@ export type Room = {
   members: User[];
   ownerId: string;
   createdAt: string;
+  isMock?: boolean;
 };
 
 export type Message = {
