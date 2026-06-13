@@ -11,21 +11,17 @@ export function ExamFilterBar({ activeFilter, onFilterChange }: ExamFilterBarPro
   const tabs: FilterType[] = ['ALL', 'JEE', 'NEET', 'UPSC', 'CBSE', 'CAT'];
 
   return (
-    <div className="w-full border-y border-ink bg-canvas sticky top-[56px] z-40">
-      <div className="flex overflow-x-auto md:flex-wrap hide-scrollbar">
+    <div className="w-full sticky top-[56px] z-40 py-2 border-b" style={{ backgroundColor: 'var(--nav-bg)', borderColor: 'var(--card-border)', backdropFilter: 'blur(12px)' }}>
+      <div className="flex overflow-x-auto md:flex-wrap hide-scrollbar px-6 gap-2">
         {tabs.map((tab) => {
           const isActive = activeFilter === tab;
           return (
             <button
               key={tab}
               onClick={() => onFilterChange(tab)}
-              className={`flex-shrink-0 flex items-center font-mono text-[13px] px-[20px] py-[10px] transition-colors whitespace-nowrap ${
-                isActive ? 'bg-ink text-white' : 'bg-transparent text-ink hover:bg-surface'
-              }`}
+              className="flex-shrink-0 flex items-center font-sans font-medium text-[13px] px-[16px] py-[6px] rounded-md transition-colors duration-150 whitespace-nowrap hover:opacity-80"
+              style={isActive ? { backgroundColor: 'var(--tab-active-bg)', color: 'var(--tab-active-text)' } : { backgroundColor: 'transparent', color: 'var(--tab-inactive-text)' }}
             >
-              {isActive && (
-                <span className="w-[6px] h-[6px] rounded-full bg-ink-muted mr-2" />
-              )}
               {tab}
             </button>
           );

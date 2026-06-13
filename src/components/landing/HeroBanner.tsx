@@ -1,6 +1,9 @@
 export function HeroBanner() {
   return (
-    <section className="relative w-full pt-[80px] pb-[64px] bg-canvas flex flex-col items-center text-center overflow-hidden">
+    <section
+      className="relative w-full pt-[80px] pb-[64px] flex flex-col items-center text-center overflow-hidden"
+      style={{ backgroundColor: 'var(--hero-bg)', backgroundImage: 'radial-gradient(ellipse at 50% 0%, rgba(92,122,90,0.06) 0%, transparent 70%)' }}
+    >
       {/* Noise Texture */}
       <svg
         className="absolute inset-0 w-full h-full opacity-[0.15] pointer-events-none mix-blend-multiply"
@@ -18,9 +21,21 @@ export function HeroBanner() {
       </svg>
 
       <div className="relative z-10 px-4 flex flex-col items-center">
-        <h1 className="font-serif text-[36px] md:text-[42px] max-w-[640px] leading-[1.3] text-ink mb-12">
-          &quot;The secret of getting ahead is getting started.&quot;
-        </h1>
+        <span className="font-sans font-medium text-[11px] uppercase tracking-[0.12em] mb-4" style={{ color: 'var(--text-muted)' }}>
+          Today&apos;s focus
+        </span>
+
+        <div className="relative mb-12">
+          <span
+            className="absolute -top-[40px] -left-[30px] font-serif text-[120px] leading-none select-none"
+            style={{ color: '#D4CFC9' }}
+          >
+            &ldquo;
+          </span>
+          <h1 className="relative font-serif font-medium text-[28px] md:text-[40px] max-w-[600px] leading-[1.25] tracking-[-0.02em] text-text-primary">
+            The secret of getting ahead is getting started.
+          </h1>
+        </div>
 
         {/* Minimalist Desk SVG */}
         <svg
@@ -28,7 +43,7 @@ export function HeroBanner() {
           height="60"
           viewBox="0 0 120 60"
           fill="none"
-          stroke="var(--color-ink)"
+          stroke="var(--border-strong)"
           strokeWidth="1.5"
           xmlns="http://www.w3.org/2000/svg"
         >

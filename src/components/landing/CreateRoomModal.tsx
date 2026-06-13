@@ -128,26 +128,31 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
     }
   };
 
-  const inputStyles = "w-full border border-ink bg-white font-sans text-[14px] px-3 py-2 text-ink outline-none focus:border-[2px] focus:p-[7px] placeholder:text-ink/40";
-  const labelStyles = "block font-mono text-[12px] text-ink mb-1";
+  const inputStyles = "w-full border border-border-default bg-surface rounded-lg font-sans text-[14px] px-3 h-[40px] text-text-primary outline-none focus:border-accent-green transition-all duration-150 placeholder:text-text-muted";
+  const labelStyles = "block font-sans font-semibold text-[12px] text-text-primary mb-1.5 uppercase tracking-[0.02em]";
 
   return (
     <div 
-      className="fixed inset-0 bg-ink/60 z-[100] flex items-end sm:items-center justify-center"
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center backdrop-blur-[4px]"
+      style={{ backgroundColor: 'rgba(28, 25, 23, 0.5)' }}
       onClick={handleOverlayClick}
     >
       <div 
         ref={modalRef}
-        className="w-full sm:w-[480px] max-w-[90vw] bg-canvas sm:border-[2px] border-ink sm:shadow-[8px_8px_0px_var(--color-ink)] h-full sm:h-auto overflow-y-auto sm:overflow-visible transition-transform duration-300 animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:fade-in-0 flex flex-col"
+        className="w-full sm:w-[480px] max-w-[90vw] bg-surface-raised rounded-[16px] border border-border-default h-full sm:h-auto overflow-y-auto sm:overflow-visible transition-transform duration-300 animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:fade-in-0 flex flex-col"
+        style={{ boxShadow: '0 24px 48px rgba(0,0,0,0.15)' }}
       >
-        <div className="flex justify-between items-center px-5 py-4 border-b border-ink shrink-0">
-          <h2 className="font-serif text-[22px] text-ink">Initialize Room</h2>
-          <button 
-            onClick={onClose}
-            className="text-ink hover:text-ink-muted transition-colors font-mono text-[16px] leading-none p-1"
-          >
-            ✕
-          </button>
+        <div className="flex flex-col px-6 py-5 shrink-0" style={{ borderBottom: '1px solid var(--canvas)' }}>
+          <div className="flex justify-between items-start">
+            <h2 className="font-sans font-bold text-[20px] text-text-primary">Create a Room</h2>
+            <button 
+              onClick={onClose}
+              className="text-text-muted hover:text-text-primary transition-colors font-mono text-[16px] leading-none p-1"
+            >
+              ✕
+            </button>
+          </div>
+          <p className="font-sans text-[13px] text-text-secondary mt-1">Your room will be live immediately</p>
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 flex flex-col gap-4">
@@ -197,7 +202,8 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Optional context for others..."
               rows={3}
-              className={`${inputStyles} resize-none`}
+              className={`${inputStyles} resize-none py-2 h-auto`}
+              style={{ minHeight: '80px' }}
             />
           </div>
 
@@ -215,9 +221,9 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
 
           <button 
             type="submit"
-            className="w-full h-[44px] bg-ink text-white font-sans text-[14px] border border-ink mt-2 hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-[2px_2px_0px_var(--color-ink-muted)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
+            className="w-full h-[44px] bg-text-primary text-surface-raised rounded-lg font-sans font-semibold text-[13px] mt-2 hover:bg-[#2C2A27] hover:shadow-md hover:-translate-y-[1px] transition-all duration-200"
           >
-            Submit
+            Create Room
           </button>
         </form>
       </div>

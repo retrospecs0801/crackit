@@ -168,7 +168,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
   }
 
   return (
-    <div className="h-screen w-full overflow-hidden flex flex-col bg-canvas">
+    <div className="h-screen w-full overflow-hidden flex flex-col bg-[#18181B]">
       {!currentUser && (
         <DisplayNameModal 
           onComplete={(name) => {
@@ -238,14 +238,19 @@ export default function RoomPage({ params }: { params: { id: string } }) {
             style={{ height: '100%', display: 'contents' }}
           >
             {/* Main Column */}
-            <div className="flex-1 relative flex flex-col items-center justify-center">
+            <div className="flex-1 relative flex flex-col items-center justify-between pb-6">
               <div className="absolute top-4 left-4 z-10 flex flex-col gap-1">
                 <span className="font-mono text-[10px] bg-ink text-white px-2 py-0.5 w-fit">{roomData.examTag}</span>
                 <span className="font-sans text-[12px] text-ink bg-canvas/80 px-1 backdrop-blur-sm rounded">{roomData.topic}</span>
               </div>
 
-              <VideoGrid />
-              <MediaControls />
+              <div className="w-full flex-1 p-4 pb-0 overflow-hidden flex flex-col justify-center">
+                <VideoGrid />
+              </div>
+              
+              <div className="pt-4 shrink-0">
+                <MediaControls />
+              </div>
             </div>
 
             {/* Sidebar */}
@@ -255,30 +260,28 @@ export default function RoomPage({ params }: { params: { id: string } }) {
                 transition-transform duration-300
                 ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
               `}
-              style={{ backgroundColor: '#1A1A1A', borderLeft: '1px solid #333333' }}
+              style={{ backgroundColor: '#111113', borderLeft: '1px solid #1E1E21' }}
             >
               {/* Tab Bar */}
-              <div className="flex w-full shrink-0" style={{ height: '44px', borderBottom: '1px solid #333333', backgroundColor: '#1A1A1A' }}>
+              <div className="flex w-full shrink-0 px-2 py-1" style={{ height: '44px', borderBottom: '1px solid #1E1E21', backgroundColor: '#111113' }}>
                 <button
                   onClick={() => setActiveTab('focus')}
-                  className="flex-1 flex items-center justify-center font-sans text-[13px] transition-all duration-150"
+                  className="flex-1 flex items-center justify-center font-sans text-[13px] transition-all duration-150 rounded-[6px]"
                   style={{
                     color: activeTab === 'focus' ? '#E8E8E8' : '#888888',
-                    borderBottom: activeTab === 'focus' ? '2px solid #7A8B76' : '2px solid transparent',
+                    backgroundColor: activeTab === 'focus' ? '#27272A' : 'transparent',
                     opacity: activeTab === 'focus' ? 1 : 0.7,
-                    transform: activeTab === 'focus' ? 'translateY(0)' : 'translateY(1px)'
                   }}
                 >
                   Focus
                 </button>
                 <button
                   onClick={() => setActiveTab('apps')}
-                  className="flex-1 flex items-center justify-center font-sans text-[13px] transition-all duration-150"
+                  className="flex-1 flex items-center justify-center font-sans text-[13px] transition-all duration-150 rounded-[6px]"
                   style={{
                     color: activeTab === 'apps' ? '#E8E8E8' : '#888888',
-                    borderBottom: activeTab === 'apps' ? '2px solid #7A8B76' : '2px solid transparent',
+                    backgroundColor: activeTab === 'apps' ? '#27272A' : 'transparent',
                     opacity: activeTab === 'apps' ? 1 : 0.7,
-                    transform: activeTab === 'apps' ? 'translateY(0)' : 'translateY(1px)'
                   }}
                 >
                   Apps
@@ -292,11 +295,13 @@ export default function RoomPage({ params }: { params: { id: string } }) {
                   className="absolute inset-0 flex flex-col"
                   style={{ display: activeTab === 'focus' ? 'flex' : 'none' }}
                 >
-                  <div style={{ backgroundColor: '#242424', borderRadius: '8px', border: '1px solid #333333', margin: '12px', padding: '16px' }}>
+                  <div style={{ backgroundColor: '#1C1C1F', borderRadius: '8px', border: '1px solid #2A2A2D', margin: '12px', padding: '16px' }}>
                     <PomodoroTimer isOwner={currentUser?.displayName === roomData?.ownerId} currentUserId={currentUser?.displayName ?? ''} />
                   </div>
-                  <div className="flex-1 min-h-0" style={{ padding: '0 12px 12px' }}>
-                    <ChatSidebar roomId={roomData.id} />
+                  <div className="flex-1 min-h-0 flex flex-col justify-center" style={{ padding: '0 12px 12px' }}>
+                    <div className="my-auto h-[60%] min-h-[300px]">
+                      <ChatSidebar roomId={roomData.id} />
+                    </div>
                   </div>
                 </div>
                 

@@ -20,8 +20,8 @@ export function MusicPlayer() {
   return (
     <button
       onClick={togglePlay}
-      className={`font-mono text-[12px] border border-ink px-3 py-1.5 transition-colors ${
-        isPlaying ? 'border-ink-muted text-ink-muted' : 'text-ink'
+      className={`font-sans font-medium text-[12px] border rounded-[6px] px-3 py-1.5 transition-colors ${
+        isPlaying ? 'bg-[#27272A] border-[#5C7A5A] text-[#5C7A5A]' : 'bg-[#27272A] border-[#3F3F46] text-[#A1A1AA]'
       }`}
     >
       Lo-Fi {isPlaying ? '■' : '▶'}
