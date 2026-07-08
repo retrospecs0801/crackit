@@ -2,6 +2,7 @@ import { User } from '@/types';
 import { MicOff, VideoOff } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useDataChannel } from '@livekit/components-react';
+import { Avatar } from '@/components/ui/Avatar';
 
 interface VideoTileProps {
   user: User;
@@ -26,7 +27,7 @@ export function VideoTile({ user, seatNumber, isOwner, isMuted, isCamOff }: Vide
       if (payload.type === 'PLAYING' && payload.userId === user.displayName) {
         setIsPlayingYouTube(true);
       }
-    } catch(e) {}
+    } catch {}
   }, [message, user.displayName]);
 
   return (
@@ -36,12 +37,14 @@ export function VideoTile({ user, seatNumber, isOwner, isMuted, isCamOff }: Vide
     >
       {/* Center Avatar */}
       {displayCamOff && (
-        <div 
-          className="w-[48px] h-[48px] rounded-full flex items-center justify-center font-mono text-[16px] text-white border border-ink"
-          style={{ backgroundColor: user.avatarColor }}
-        >
-          {user.avatarInitials}
-        </div>
+        <Avatar
+          name={user.displayName}
+          avatarUrl={user.avatarUrl}
+          avatarInitials={user.avatarInitials}
+          avatarColor={user.avatarColor}
+          sizeClassName="w-[48px] h-[48px] text-[16px]"
+          className="border border-ink"
+        />
       )}
 
       {/* Top Right Status Icons */}

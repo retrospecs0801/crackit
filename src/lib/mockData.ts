@@ -29,6 +29,7 @@ export const mockRooms: Room[] = [
     maxStudents: 6,
     currentStudents: 4,
     members: [mockUsers[0], mockUsers[1], mockUsers[2], mockUsers[3]],
+    owner_id: 'u1',
     ownerId: 'u1',
     createdAt: '2023-10-27T08:00:00Z',
     isMock: true,

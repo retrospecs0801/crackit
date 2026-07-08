@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     const serverUrl = livekitUrl.replace('wss://', 'https://').replace('ws://', 'http://');
     const svc = new RoomServiceClient(serverUrl, apiKey, apiSecret);
 
-    const lkRoom = await svc.createRoom({
+    await svc.createRoom({
       name: roomDetails.id,
       emptyTimeout: 10 * 60, // 10 minutes (give creator plenty of time to join)
       maxParticipants: roomDetails.maxStudents || 10,
@@ -30,8 +30,9 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ success: true, room: roomDetails });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to create room:', error);
-    return NextResponse.json({ error: error.message || 'Failed to create room' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to create room';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

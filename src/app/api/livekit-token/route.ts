@@ -5,6 +5,10 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const roomName = searchParams.get('roomName')
   const participantName = searchParams.get('participantName')
+  const userId = searchParams.get('userId') || participantName
+  const avatarUrl = searchParams.get('avatarUrl') || null
+  const avatarColor = searchParams.get('avatarColor') || undefined
+  const avatarInitials = searchParams.get('avatarInitials') || undefined
 
   if (!roomName || !participantName) {
     return NextResponse.json(
@@ -24,7 +28,15 @@ export async function GET(req: NextRequest) {
   }
 
   const token = new AccessToken(apiKey, apiSecret, {
-    identity: participantName,
+    identity: userId!,
+    name: participantName,
+    metadata: JSON.stringify({
+      displayName: participantName,
+      userId: userId!,
+      avatarUrl,
+      avatarColor,
+      avatarInitials,
+    }),
     ttl: '10h',
   })
 

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ExamTag, Room } from '@/types';
+import { createClient } from '@/lib/supabase/client';
 
 interface CreateRoomModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
   const [topic, setTopic] = useState('');
   const [description, setDescription] = useState('');
   const [maxStudents, setMaxStudents] = useState(6);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -80,6 +82,17 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
 
     if (hasError) return;
 
+    setSubmitting(true);
+
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      alert('You must be signed in to create a room.');
+      setSubmitting(false);
+      return;
+    }
+
     const slug = roomName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
     const randomId = Math.random().toString(36).substring(2, 7);
     const id = `${slug}-${randomId}`;
@@ -93,17 +106,29 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
       maxStudents: Number(maxStudents),
       currentStudents: 1,
       members: [],
-      ownerId: (() => {
-        try {
-          const stored = localStorage.getItem('studyhall_current_user');
-          if (stored) return JSON.parse(stored).displayName;
-        } catch {}
-        return 'anonymous';
-      })(),
+      owner_id: user.id,
+      ownerId: user.id,
       createdAt: new Date().toISOString()
     };
     
     try {
+      // 1. Insert room into Supabase database
+      const { error: supabaseError } = await supabase.from('rooms').insert({
+        id: room.id,
+        name: room.name,
+        exam_tag: room.examTag,
+        topic: room.topic,
+        description: room.description,
+        max_students: room.maxStudents,
+        owner_id: user.id,
+        created_at: room.createdAt,
+      });
+
+      if (supabaseError) {
+        console.warn('Supabase room insert warning:', supabaseError);
+      }
+
+      // 2. Create room via LiveKit server endpoint
       const res = await fetch('/api/rooms/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -114,8 +139,6 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
         throw new Error('Failed to create room');
       }
       
-      // Cache room in sessionStorage so the room page can immediately identify the owner
-      // without racing against the LiveKit API propagation delay
       try {
         sessionStorage.setItem(`crackit_room_${room.id}`, JSON.stringify(room));
       } catch {}
@@ -125,6 +148,8 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
     } catch (error) {
       console.error('Error creating room:', error);
       alert('Could not create room. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -221,9 +246,10 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
 
           <button 
             type="submit"
-            className="w-full h-[44px] bg-text-primary text-surface-raised rounded-lg font-sans font-semibold text-[13px] mt-2 hover:bg-[#2C2A27] hover:shadow-md hover:-translate-y-[1px] transition-all duration-200"
+            disabled={submitting}
+            className="w-full h-[44px] bg-text-primary text-surface-raised rounded-lg font-sans font-semibold text-[13px] mt-2 hover:bg-[#2C2A27] hover:shadow-md hover:-translate-y-[1px] transition-all duration-200 disabled:opacity-50"
           >
-            Create Room
+            {submitting ? 'Creating Room...' : 'Create Room'}
           </button>
         </form>
       </div>

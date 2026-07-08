@@ -59,6 +59,10 @@
     --btn-primary-text: var(--surface-raised);
     --btn-demo-border: #D0CBC4;
     --btn-demo-text: #1C1917;
+
+    --heatmap-empty: #E0DBD5;
+    --scrollbar-track: #EDEAE4;
+    --scrollbar-thumb: #C8C2BB;
   }
 
   .dark {
@@ -93,6 +97,27 @@
     --btn-primary-text: #121212;
     --btn-demo-border: #4B5563;
     --btn-demo-text: #F3F4F6;
+
+    --heatmap-empty: #2E2E2E;
+    --scrollbar-track: #1A1A1A;
+    --scrollbar-thumb: #4B5563;
+  }
+
+  /* Custom scrollbar utility */
+  .scrollbar-thin::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+    border-radius: 3px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 3px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
   }
 
   body {

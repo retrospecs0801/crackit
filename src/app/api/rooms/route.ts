@@ -29,15 +29,16 @@ export async function GET() {
         // Update current participants count based on actual LiveKit room data
         roomData.currentStudents = lkRoom.numParticipants;
         activeRooms.push(roomData);
-      } catch (e) {
+      } catch {
         // Ignore rooms with invalid metadata
         console.warn(`Failed to parse metadata for room ${lkRoom.name}`);
       }
     }
 
     return NextResponse.json(activeRooms);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to list rooms:', error);
-    return NextResponse.json({ error: error.message || 'Failed to list rooms' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to list rooms';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -1,7 +1,16 @@
 import Link from 'next/link';
 import { MusicPlayer } from '../room/MusicPlayer';
+import { NotificationsBell } from './NotificationsBell';
 
-export function RoomNavbar({ roomName, onToggleSidebar }: { roomName: string, onToggleSidebar: () => void }) {
+export function RoomNavbar({
+  roomName,
+  currentUserId,
+  onToggleSidebar,
+}: {
+  roomName: string;
+  currentUserId?: string | null;
+  onToggleSidebar: () => void;
+}) {
   return (
     <nav className="fixed top-0 left-0 right-0 h-[52px] bg-[rgba(24,24,27,0.95)] backdrop-blur-[12px] border-b border-[#2A2A2D] flex items-center justify-between px-6 z-50">
       <div className="flex-1">
@@ -12,7 +21,8 @@ export function RoomNavbar({ roomName, onToggleSidebar }: { roomName: string, on
       <div className="flex-1 text-center font-sans font-semibold text-[15px] text-[#FAFAF8] truncate px-4">
         {roomName}
       </div>
-      <div className="flex-1 flex justify-end items-center gap-4">
+      <div className="flex-1 flex justify-end items-center gap-3">
+        {currentUserId && <NotificationsBell userId={currentUserId} />}
         {/* Mobile sidebar toggle button (visible only on small screens) */}
         <button onClick={onToggleSidebar} className="md:hidden font-sans text-[13px] text-[#FAFAF8] border border-[#3F3F46] px-2 py-1 rounded">
           Chat / Timer

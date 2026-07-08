@@ -9,32 +9,47 @@ import { RoomNavbar } from '@/components/layout/RoomNavbar';
 import { PomodoroTimer } from '@/components/room/PomodoroTimer';
 import { ChatSidebar } from '@/components/room/ChatSidebar';
 import { AppsTray } from '@/components/room/AppsTray';
-import  VideoGrid  from '@/components/room/VideoGrid';
-import  MediaControls  from '@/components/room/MediaControls';
+import VideoGrid from '@/components/room/VideoGrid';
+import MediaControls from '@/components/room/MediaControls';
+import { RoomParticipantSidebar } from '@/components/room/RoomParticipantSidebar';
+import { EyeOff, LayoutGrid } from 'lucide-react';
 import { mockRooms } from '@/lib/mockData';
 import { getAvatarColor } from '@/lib/utils';
+import { logRoomJoin } from '@/lib/supabase/stats';
 import { Room, User } from '@/types';
-import { DisplayNameModal } from '@/components/room/DisplayNameModal';
+import { createClient } from '@/lib/supabase/client';
+import { GoogleSignInModal } from '@/components/auth/GoogleSignInModal';
 
 export default function RoomPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showVideoGrid, setShowVideoGrid] = useState(true);
   
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [roomData, setRoomData] = useState<Room | null>(null);
-  const [isNotFound, setIsNotFound] = useState(false);
+  const [isNotFound] = useState(false);
   const [activeTab, setActiveTab] = useState<'focus' | 'apps'>('focus');
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   const [livekitToken, setLivekitToken] = useState<string | null>(null);
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [showReady, setShowReady] = useState(true);
 
-  async function fetchToken(roomId: string, displayName: string) {
+  async function fetchToken(roomId: string, user: User) {
     const controller = new AbortController();
     try {
+      const query = new URLSearchParams({
+        roomName: roomId,
+        participantName: user.displayName,
+        userId: user.id,
+      });
+      if (user.avatarUrl) query.set('avatarUrl', user.avatarUrl);
+      if (user.avatarColor) query.set('avatarColor', user.avatarColor);
+      if (user.avatarInitials) query.set('avatarInitials', user.avatarInitials);
+
       const res = await fetch(
-        `/api/livekit-token?roomName=${encodeURIComponent(roomId)}&participantName=${encodeURIComponent(displayName)}`,
+        `/api/livekit-token?${query.toString()}`,
         { signal: controller.signal }
       );
       if (!res.ok) throw new Error('Token fetch failed');
@@ -48,26 +63,48 @@ export default function RoomPage({ params }: { params: { id: string } }) {
   }
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('studyhall_current_user');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed && !parsed.avatarColor) {
-          parsed.avatarColor = getAvatarColor(parsed.displayName);
-          parsed.avatarInitials = parsed.displayName.substring(0, 2).toUpperCase();
-          localStorage.setItem('studyhall_current_user', JSON.stringify(parsed));
-        }
-        setCurrentUser(parsed);
+    const checkAuthAndProfile = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        setAuthModalOpen(true);
+        // Fallback check localStorage if testing without live Supabase session
+        try {
+          const stored = localStorage.getItem('studyhall_current_user');
+          if (stored) {
+            setCurrentUser(JSON.parse(stored));
+          }
+        } catch {}
+        return;
       }
-    } catch (e) {
-      console.error(e);
-    }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      const displayName = profile?.display_name || user.user_metadata?.full_name || 'Student';
+      const userObj: User = {
+        id: user.id,
+        displayName,
+        avatarInitials: profile?.avatar_initials || displayName.substring(0, 2).toUpperCase(),
+        avatarColor: profile?.avatar_color || getAvatarColor(displayName),
+      };
+
+      setCurrentUser(userObj);
+      try {
+        localStorage.setItem('studyhall_current_user', JSON.stringify(userObj));
+      } catch {}
+    };
+
+    checkAuthAndProfile();
   }, []);
 
   useEffect(() => {
     const fetchRoom = async () => {
       // 1. Check sessionStorage first — available immediately for the room creator
-      //    without racing against LiveKit API propagation delay
       try {
         const cached = sessionStorage.getItem(`crackit_room_${params.id}`);
         if (cached) {
@@ -83,7 +120,37 @@ export default function RoomPage({ params }: { params: { id: string } }) {
         return;
       }
       
-      // 3. Fetch from LiveKit API (for users joining via shared link)
+      // 3. Check Supabase rooms table
+      try {
+        const supabase = createClient();
+        const { data: dbRoom } = await supabase
+          .from('rooms')
+          .select('*')
+          .eq('id', params.id)
+          .single();
+
+        if (dbRoom) {
+          setRoomData({
+            id: dbRoom.id,
+            name: dbRoom.name,
+            examTag: dbRoom.exam_tag,
+            topic: dbRoom.topic || '',
+            description: dbRoom.description || '',
+            maxStudents: dbRoom.max_students || 6,
+            currentStudents: 1,
+            members: [],
+            owner_id: dbRoom.owner_id,
+            ownerId: dbRoom.owner_id,
+            createdAt: dbRoom.created_at,
+            isMock: false,
+          });
+          return;
+        }
+      } catch (e) {
+        console.warn('Could not fetch room from Supabase:', e);
+      }
+
+      // 4. Fetch from LiveKit API (for users joining via shared link)
       try {
         const res = await fetch('/api/rooms');
         if (res.ok) {
@@ -98,7 +165,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
         console.error('Error fetching live rooms:', e);
       }
       
-      // 4. Fallback for unknown rooms (joined via link before any participant joined)
+      // 5. Fallback for unknown rooms
       const fallbackRoom: Room = {
         id: params.id,
         name: `Room ${params.id.substring(0, 8)}`,
@@ -108,6 +175,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
         maxStudents: 10,
         currentStudents: 1,
         members: [],
+        owner_id: 'unknown',
         ownerId: 'unknown',
         createdAt: new Date().toISOString()
       };
@@ -122,7 +190,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
     let abortFn: (() => void) | null = null;
     
     if (roomData && currentUser && !livekitToken) {
-      fetchToken(roomData.id, currentUser.displayName).then(cleanup => {
+      fetchToken(roomData.id, currentUser).then(cleanup => {
         abortFn = cleanup ?? null;
       });
     }
@@ -134,13 +202,16 @@ export default function RoomPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     if (livekitToken) {
-      console.log('[StudyHall] LiveKit token ready:', livekitToken.substring(0, 30) + '...');
       const timer = setTimeout(() => setShowReady(false), 3000);
       return () => clearTimeout(timer);
     }
   }, [livekitToken]);
 
-  const localUserId = 'u1';
+  useEffect(() => {
+    if (livekitToken && currentUser?.id && roomData?.id) {
+      logRoomJoin(currentUser.id, roomData.id);
+    }
+  }, [livekitToken, currentUser, roomData]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -151,6 +222,13 @@ export default function RoomPage({ params }: { params: { id: string } }) {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  const isOwner = Boolean(
+    currentUser && roomData && (
+      currentUser.id === roomData.owner_id ||
+      currentUser.id === roomData.ownerId
+    )
+  );
 
   if (isNotFound) {
     return (
@@ -168,162 +246,208 @@ export default function RoomPage({ params }: { params: { id: string } }) {
   }
 
   return (
-    <div className="h-screen w-full overflow-hidden flex flex-col bg-[#18181B]">
-      {!currentUser && (
-        <DisplayNameModal 
-          onComplete={(name) => {
-            try {
-              const stored = localStorage.getItem('studyhall_current_user');
-              if (stored) {
-                setCurrentUser(JSON.parse(stored));
-              }
-            } catch (e) {}
-          }} 
+    <>
+      <div className="h-screen w-full overflow-hidden flex flex-col bg-[#18181B]">
+        <RoomNavbar 
+          roomName={roomData.name} 
+          currentUserId={currentUser?.id}
+          onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} 
         />
-      )}
-      
-      <RoomNavbar 
-        roomName={roomData.name} 
-        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} 
-      />
-      
-      <div className="flex-1 flex flex-row mt-[52px] h-[calc(100vh-52px)] relative">
-        <style>{`
-          @keyframes blinkCursor {
-            0% { opacity: 0; }
-            100% { opacity: 1; }
-          }
-        `}</style>
         
-        <div className="absolute top-4 right-4 z-10">
-          {livekitToken === null && tokenError === null && (
-            <div className="px-3 py-1 flex items-center gap-1 rounded-full shadow-sm" style={{ background: '#EAE6DF', border: '1px solid #2D2A26' }}>
-              <span className="font-mono text-[11px] text-[#2D2A26]">Connecting...</span>
-              <span style={{ animation: 'blinkCursor 1s infinite alternate', width: '6px', height: '11px', background: '#2D2A26', display: 'inline-block' }}></span>
-            </div>
-          )}
-          {livekitToken !== null && showReady && (
-            <div className="px-3 py-1 rounded-full shadow-sm" style={{ background: '#7A8B76', border: '1px solid #2D2A26' }}>
-              <span className="font-mono text-[11px] text-[#F4F0EB]">Ready</span>
-            </div>
-          )}
-          {tokenError !== null && (
-            <div className="flex items-center gap-2">
-              <div className="px-3 py-1 rounded-full shadow-sm" style={{ background: '#BC6C4F', border: '1px solid #2D2A26' }}>
-                <span className="font-mono text-[11px] text-[#F4F0EB]">{tokenError}</span>
+        <div className="flex-1 flex flex-row mt-[52px] h-[calc(100vh-52px)] relative">
+          <style>{`
+            @keyframes blinkCursor {
+              0% { opacity: 0; }
+              100% { opacity: 1; }
+            }
+          `}</style>
+          
+          <div className="absolute top-4 right-4 z-10">
+            {livekitToken === null && tokenError === null && (
+              <div className="px-3 py-1 flex items-center gap-1 rounded-full shadow-sm" style={{ background: '#EAE6DF', border: '1px solid #2D2A26' }}>
+                <span className="font-mono text-[11px] text-[#2D2A26]">Connecting...</span>
+                <span style={{ animation: 'blinkCursor 1s infinite alternate', width: '6px', height: '11px', background: '#2D2A26', display: 'inline-block' }}></span>
               </div>
-              <button 
-                onClick={() => {
-                  setTokenError(null);
-                  if (roomData && currentUser) {
-                    fetchToken(roomData.id, currentUser.displayName);
-                  }
-                }}
-                className="font-mono text-[11px] text-ink underline underline-offset-2 hover:text-ink-muted"
+            )}
+            {livekitToken !== null && showReady && (
+              <div className="px-3 py-1 rounded-full shadow-sm" style={{ background: '#7A8B76', border: '1px solid #2D2A26' }}>
+                <span className="font-mono text-[11px] text-[#F4F0EB]">Ready</span>
+              </div>
+            )}
+            {tokenError !== null && (
+              <div className="flex items-center gap-2">
+                <div className="px-3 py-1 rounded-full shadow-sm" style={{ background: '#BC6C4F', border: '1px solid #2D2A26' }}>
+                  <span className="font-mono text-[11px] text-[#F4F0EB]">{tokenError}</span>
+                </div>
+                <button 
+                  onClick={() => {
+                    setTokenError(null);
+                    if (roomData && currentUser) {
+                      fetchToken(roomData.id, currentUser);
+                    }
+                  }}
+                  className="font-mono text-[11px] text-ink underline underline-offset-2 hover:text-ink-muted"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+          </div>
+
+          {livekitToken ? (
+            <LiveKitRoom
+              token={livekitToken}
+              serverUrl={livekitUrl}
+              connect={true}
+              audio={false}
+              video={false}
+              onDisconnected={() => router.push('/')}
+              style={{ height: '100%', display: 'contents' }}
+            >
+              {/* Left Participant Avatars Dock */}
+              <RoomParticipantSidebar
+                showVideoGrid={showVideoGrid}
+                onToggleVideoGrid={() => setShowVideoGrid(!showVideoGrid)}
+              />
+
+              {/* Main Column */}
+              <div className="flex-1 relative flex flex-col items-center justify-between p-4 overflow-hidden bg-[#0D0D0E]">
+                {/* Main Study Stage Window Container */}
+                <div className="w-full flex-1 relative rounded-2xl border border-[#27272A] bg-[#111113] shadow-2xl overflow-hidden flex flex-col">
+                  {/* Top Overlay Badge */}
+                  <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
+                    <span className="font-mono text-[11px] bg-[#27272A] text-[#E5E7EB] border border-[#3F3F46] px-2.5 py-0.5 rounded-md font-semibold tracking-wide">
+                      {roomData.examTag}
+                    </span>
+                    {roomData.topic && (
+                      <span className="font-sans text-xs text-[#D4D4D8] bg-[#1A1A1D]/80 backdrop-blur-md px-2.5 py-0.5 border border-[#2D2D30] rounded-md">
+                        {roomData.topic}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Stage Content: Video Grid OR Ambient Background */}
+                  <div className="w-full flex-1 p-4 overflow-hidden flex flex-col justify-center">
+                    {showVideoGrid ? (
+                      <VideoGrid
+                        currentUserId={currentUser?.id}
+                        roomName={roomData.id}
+                        isRoomOwner={isOwner}
+                      />
+                    ) : (
+                      <div className="w-full h-full rounded-xl border border-[#27272A] bg-gradient-to-br from-[#18181B] via-[#141416] to-[#0D0D0E] flex flex-col items-center justify-center p-6 relative overflow-hidden select-none">
+                        <div className="absolute inset-0 bg-[linear-gradient(to_right,#27272A15_1px,transparent_1px),linear-gradient(to_bottom,#27272A15_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
+
+                        <div className="relative z-10 max-w-md bg-[#1C1C1F]/90 border border-[#2D2D30] backdrop-blur-xl rounded-2xl p-8 flex flex-col items-center text-center gap-4 shadow-2xl">
+                          <div className="w-14 h-14 rounded-2xl bg-[#27272A] border border-[#3F3F46] flex items-center justify-center text-[#A3B899] shadow-inner">
+                            <EyeOff size={26} />
+                          </div>
+                          <div className="flex flex-col gap-1.5">
+                            <h3 className="font-sans text-lg font-bold text-[#FAFAF8] tracking-tight">
+                              Ambient Study Mode
+                            </h3>
+                            <p className="font-sans text-xs text-[#9CA3AF] leading-relaxed">
+                              Video screens are hidden for deep focus. Audio, timers, and chat remain connected and active.
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => setShowVideoGrid(true)}
+                            className="mt-2 px-4 py-2 rounded-xl bg-[#27272A] hover:bg-[#323236] border border-[#3F3F46] text-xs font-medium text-[#E5E7EB] transition-colors flex items-center gap-2"
+                          >
+                            <LayoutGrid size={14} />
+                            <span>Show Video Cards</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Floating Bottom Controls Pill */}
+                <div className="pt-4 shrink-0 z-20">
+                  <MediaControls />
+                </div>
+              </div>
+
+              {/* Sidebar */}
+              <div 
+                className={`
+                  fixed inset-0 z-40 top-[52px] flex flex-col md:static md:w-[300px] md:min-w-[300px] md:z-0
+                  transition-transform duration-300
+                  ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
+                `}
+                style={{ backgroundColor: '#111113', borderLeft: '1px solid #1E1E21' }}
               >
-                Retry
-              </button>
+                {/* Tab Bar */}
+                <div className="flex w-full shrink-0 px-2 py-1" style={{ height: '44px', borderBottom: '1px solid #1E1E21', backgroundColor: '#111113' }}>
+                  <button
+                    onClick={() => setActiveTab('focus')}
+                    className="flex-1 flex items-center justify-center font-sans text-[13px] transition-all duration-150 rounded-[6px]"
+                    style={{
+                      color: activeTab === 'focus' ? '#E8E8E8' : '#888888',
+                      backgroundColor: activeTab === 'focus' ? '#27272A' : 'transparent',
+                      opacity: activeTab === 'focus' ? 1 : 0.7,
+                    }}
+                  >
+                    Focus
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('apps')}
+                    className="flex-1 flex items-center justify-center font-sans text-[13px] transition-all duration-150 rounded-[6px]"
+                    style={{
+                      color: activeTab === 'apps' ? '#E8E8E8' : '#888888',
+                      backgroundColor: activeTab === 'apps' ? '#27272A' : 'transparent',
+                      opacity: activeTab === 'apps' ? 1 : 0.7,
+                    }}
+                  >
+                    Apps
+                  </button>
+                </div>
+
+                {/* Tab Content */}
+                <div className="flex-1 min-h-0 flex flex-col relative overflow-hidden">
+                  {/* Focus Tab */}
+                  <div
+                    className="absolute inset-0 flex flex-col"
+                    style={{ display: activeTab === 'focus' ? 'flex' : 'none' }}
+                  >
+                    <div style={{ backgroundColor: '#1C1C1F', borderRadius: '8px', border: '1px solid #2A2A2D', margin: '12px', padding: '16px' }}>
+                      <PomodoroTimer isOwner={isOwner} currentUserId={currentUser?.id || currentUser?.displayName || ''} />
+                    </div>
+                    <div className="flex-1 min-h-0 flex flex-col justify-center" style={{ padding: '0 12px 12px' }}>
+                      <div className="my-auto h-[60%] min-h-[300px]">
+                        <ChatSidebar roomId={roomData.id} />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Apps Tab */}
+                  <div
+                    className="absolute inset-0 flex flex-col"
+                    style={{ display: activeTab === 'apps' ? 'flex' : 'none' }}
+                  >
+                    <AppsTray roomId={roomData.id} currentUserId={currentUser?.displayName ?? ''} />
+                  </div>
+                </div>
+              </div>
+            </LiveKitRoom>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center">
+              <div className="px-3 py-1 flex items-center gap-1 rounded-full shadow-sm" style={{ background: '#EAE6DF', border: '1px solid #2D2A26' }}>
+                <span className="font-mono text-[11px] text-[#2D2A26]">Connecting...</span>
+                <span style={{ animation: 'blinkCursor 1s infinite alternate', width: '6px', height: '11px', background: '#2D2A26', display: 'inline-block' }}></span>
+              </div>
             </div>
           )}
         </div>
-
-        {livekitToken ? (
-          <LiveKitRoom
-            token={livekitToken}
-            serverUrl={livekitUrl}
-            connect={true}
-            audio={true}
-            video={true}
-            onDisconnected={() => router.push('/')}
-            style={{ height: '100%', display: 'contents' }}
-          >
-            {/* Main Column */}
-            <div className="flex-1 relative flex flex-col items-center justify-between pb-6">
-              <div className="absolute top-4 left-4 z-10 flex flex-col gap-1">
-                <span className="font-mono text-[10px] bg-ink text-white px-2 py-0.5 w-fit">{roomData.examTag}</span>
-                <span className="font-sans text-[12px] text-ink bg-canvas/80 px-1 backdrop-blur-sm rounded">{roomData.topic}</span>
-              </div>
-
-              <div className="w-full flex-1 p-4 pb-0 overflow-hidden flex flex-col justify-center">
-                <VideoGrid />
-              </div>
-              
-              <div className="pt-4 shrink-0">
-                <MediaControls />
-              </div>
-            </div>
-
-            {/* Sidebar */}
-            <div 
-              className={`
-                fixed inset-0 z-40 top-[52px] flex flex-col md:static md:w-[300px] md:min-w-[300px] md:z-0
-                transition-transform duration-300
-                ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
-              `}
-              style={{ backgroundColor: '#111113', borderLeft: '1px solid #1E1E21' }}
-            >
-              {/* Tab Bar */}
-              <div className="flex w-full shrink-0 px-2 py-1" style={{ height: '44px', borderBottom: '1px solid #1E1E21', backgroundColor: '#111113' }}>
-                <button
-                  onClick={() => setActiveTab('focus')}
-                  className="flex-1 flex items-center justify-center font-sans text-[13px] transition-all duration-150 rounded-[6px]"
-                  style={{
-                    color: activeTab === 'focus' ? '#E8E8E8' : '#888888',
-                    backgroundColor: activeTab === 'focus' ? '#27272A' : 'transparent',
-                    opacity: activeTab === 'focus' ? 1 : 0.7,
-                  }}
-                >
-                  Focus
-                </button>
-                <button
-                  onClick={() => setActiveTab('apps')}
-                  className="flex-1 flex items-center justify-center font-sans text-[13px] transition-all duration-150 rounded-[6px]"
-                  style={{
-                    color: activeTab === 'apps' ? '#E8E8E8' : '#888888',
-                    backgroundColor: activeTab === 'apps' ? '#27272A' : 'transparent',
-                    opacity: activeTab === 'apps' ? 1 : 0.7,
-                  }}
-                >
-                  Apps
-                </button>
-              </div>
-
-              {/* Tab Content — always mounted, hidden via display to preserve timer & chat state */}
-              <div className="flex-1 min-h-0 flex flex-col relative overflow-hidden">
-                {/* Focus Tab */}
-                <div
-                  className="absolute inset-0 flex flex-col"
-                  style={{ display: activeTab === 'focus' ? 'flex' : 'none' }}
-                >
-                  <div style={{ backgroundColor: '#1C1C1F', borderRadius: '8px', border: '1px solid #2A2A2D', margin: '12px', padding: '16px' }}>
-                    <PomodoroTimer isOwner={currentUser?.displayName === roomData?.ownerId} currentUserId={currentUser?.displayName ?? ''} />
-                  </div>
-                  <div className="flex-1 min-h-0 flex flex-col justify-center" style={{ padding: '0 12px 12px' }}>
-                    <div className="my-auto h-[60%] min-h-[300px]">
-                      <ChatSidebar roomId={roomData.id} />
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Apps Tab */}
-                <div
-                  className="absolute inset-0 flex flex-col"
-                  style={{ display: activeTab === 'apps' ? 'flex' : 'none' }}
-                >
-                  <AppsTray roomId={roomData.id} currentUserId={currentUser?.displayName ?? ''} />
-                </div>
-              </div>
-            </div>
-          </LiveKitRoom>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center">
-            <div className="px-3 py-1 flex items-center gap-1 rounded-full shadow-sm" style={{ background: '#EAE6DF', border: '1px solid #2D2A26' }}>
-              <span className="font-mono text-[11px] text-[#2D2A26]">Connecting...</span>
-              <span style={{ animation: 'blinkCursor 1s infinite alternate', width: '6px', height: '11px', background: '#2D2A26', display: 'inline-block' }}></span>
-            </div>
-          </div>
-        )}
       </div>
-    </div>
+
+      <GoogleSignInModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        redirectTo={`/room/${params.id}`}
+        message="Sign in with Google to enter this study room."
+      />
+    </>
   );
 }
