@@ -32,7 +32,7 @@ export default function Home() {
         topic: String(r.topic || ''),
         description: String(r.description || ''),
         maxStudents: Number(r.max_students || 6),
-        currentStudents: 1,
+        currentStudents: 0,
         members: [],
         owner_id: String(r.owner_id || ''),
         ownerId: String(r.owner_id || ''),
@@ -65,7 +65,8 @@ export default function Home() {
         if (existing) {
           roomMap.set(r.id, {
             ...existing,
-            currentStudents: r.currentStudents || existing.currentStudents,
+            currentStudents: r.currentStudents !== undefined ? r.currentStudents : existing.currentStudents,
+            members: r.members && r.members.length > 0 ? r.members : existing.members || [],
           });
         } else {
           roomMap.set(r.id, r);
@@ -81,6 +82,14 @@ export default function Home() {
 
   useEffect(() => {
     refreshRooms();
+
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        refreshRooms();
+      }
+    }, 15000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const filteredRooms =

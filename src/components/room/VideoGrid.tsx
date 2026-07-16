@@ -15,16 +15,19 @@ interface VideoGridProps {
   currentUserId?: string | null;
   roomName?: string;
   isRoomOwner?: boolean;
+  ownerId?: string | null;
 }
 
 function InteractiveParticipantTile({
   currentUserId,
   roomName,
   isRoomOwner,
+  ownerId = null,
 }: {
   currentUserId: string | null;
   roomName?: string;
   isRoomOwner: boolean;
+  ownerId?: string | null;
 }) {
   const trackRef = useMaybeTrackRefContext();
   const pContext = useMaybeParticipantContext();
@@ -41,6 +44,7 @@ function InteractiveParticipantTile({
   let avatarUrl: string | null = null;
   let avatarColor: string | undefined = undefined;
   let avatarInitials: string | undefined = undefined;
+  let parsedUserId: string | null = null;
 
   try {
     if (participant.metadata) {
@@ -49,14 +53,17 @@ function InteractiveParticipantTile({
       if (parsed.avatarUrl) avatarUrl = parsed.avatarUrl;
       if (parsed.avatarColor) avatarColor = parsed.avatarColor;
       if (parsed.avatarInitials) avatarInitials = parsed.avatarInitials;
+      if (parsed.userId) parsedUserId = parsed.userId;
     }
-  } catch {}
+  } catch { }
 
   const isCameraOff = !participant.isCameraEnabled;
+  const isTileOwner = identity === ownerId || (parsedUserId !== null && parsedUserId === ownerId);
 
   return (
     <div
-      className="relative w-full h-full rounded-xl overflow-hidden border border-[#27272A] bg-[#141416] shadow-sm transition-all"
+      className={`relative w-full h-full rounded-xl overflow-hidden border bg-surface shadow-sm transition-all ${isTileOwner ? 'border-[#F59E0B]/80 shadow-[0_0_12px_rgba(245,158,11,0.3)]' : 'border-border-default'
+        }`}
       onClick={() => {
         if (!participant.isLocal) {
           setShowMenu(!showMenu);
@@ -65,27 +72,36 @@ function InteractiveParticipantTile({
     >
       <ParticipantTile />
 
+      {/* Room Owner badge for active video or tile header */}
+      {isTileOwner && (
+        <div className="absolute top-2.5 right-2.5 z-20 px-2.5 py-0.5 rounded-full bg-[#F59E0B] text-black font-sans font-bold text-[10px] flex items-center gap-1 shadow-lg tracking-wide">
+          <span> </span>
+          <span>Room Owner</span>
+        </div>
+      )}
+
       {/* If camera is off, display elegant profile picture card */}
       {isCameraOff && (
-        <div className="absolute inset-0 z-10 bg-[#141416] border border-[#27272A] rounded-xl flex flex-col items-center justify-center gap-3 p-4 select-none">
+        <div className="absolute inset-0 z-10 bg-surface border border-border-default rounded-xl flex flex-col items-center justify-center gap-3 p-4 select-none">
           <div className="relative">
             <Avatar
               name={displayName}
               avatarUrl={avatarUrl}
               avatarColor={avatarColor}
               avatarInitials={avatarInitials}
-              sizeClassName="w-20 h-20 text-2xl shadow-xl border-2 border-[#2D2D30]"
+              sizeClassName={`w-20 h-20 text-2xl shadow-xl border-2 ${isTileOwner ? 'border-[#F59E0B] shadow-[0_0_16px_rgba(245,158,11,0.5)]' : 'border-border-default'
+                }`}
             />
             {participant.isSpeaking && (
-              <span className="absolute bottom-0.5 right-0.5 w-4 h-4 rounded-full bg-[#5C7A5A] border-2 border-[#141416] animate-pulse" />
+              <span className="absolute bottom-0.5 right-0.5 w-4 h-4 rounded-full bg-accent-green border-2 border-surface animate-pulse" />
             )}
           </div>
-          <div className="flex flex-col items-center">
-            <span className="font-sans text-sm font-semibold text-[#F3F4F6]">
-              {displayName}
+          <div className="flex flex-col items-center gap-0.5">
+            <span className="font-sans text-sm font-semibold text-text-primary flex items-center gap-1.5">
+              <span>{displayName}</span>
             </span>
-            <span className="font-mono text-[10px] text-[#71717A]">
-              Camera Off
+            <span className="font-mono text-[10px] text-text-secondary">
+              {isTileOwner ? '  Room Owner • Camera Off' : 'Camera Off'}
             </span>
           </div>
         </div>
@@ -100,6 +116,8 @@ function InteractiveParticipantTile({
             currentUserId={currentUserId}
             targetUserId={identity}
             targetDisplayName={displayName}
+            targetAvatarUrl={avatarUrl}
+            targetAvatarColor={avatarColor}
             roomName={roomName}
             isRoomOwner={isRoomOwner}
             onClose={() => setShowMenu(false)}
@@ -114,6 +132,7 @@ export default function VideoGrid({
   currentUserId = null,
   roomName,
   isRoomOwner = false,
+  ownerId = null,
 }: VideoGridProps) {
   const tracks = useTracks(
     [
@@ -131,6 +150,7 @@ export default function VideoGrid({
           currentUserId={currentUserId}
           roomName={roomName}
           isRoomOwner={isRoomOwner}
+          ownerId={ownerId}
         />
       </GridLayout>
     </div>

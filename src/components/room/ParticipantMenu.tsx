@@ -126,15 +126,11 @@ export function ParticipantMenu({
 
   return (
     <div
-      className="z-50 w-64 rounded-xl p-4 border shadow-xl flex flex-col gap-3 text-white font-sans"
-      style={{
-        backgroundColor: '#1C1C1F',
-        borderColor: '#2D2D30',
-      }}
+      className="z-50 w-64 rounded-xl p-4 border border-border-default bg-surface-raised shadow-2xl flex flex-col gap-3 text-text-primary font-sans"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Header */}
-      <div className="flex items-center justify-between pb-2 border-b border-[#2D2D30]">
+      <div className="flex items-center justify-between pb-2 border-b border-border-default">
         <div className="flex items-center gap-2.5 overflow-hidden">
           <Avatar
             name={targetDisplayName}
@@ -143,17 +139,17 @@ export function ParticipantMenu({
             sizeClassName="w-9 h-9 text-xs"
           />
           <div className="flex flex-col truncate">
-            <span className="font-semibold text-sm text-[#F3F4F6] truncate">
+            <span className="font-semibold text-sm text-text-primary truncate">
               {targetDisplayName}
             </span>
-            <span className="font-mono text-[10px] text-[#9CA3AF]">
+            <span className="font-mono text-[10px] text-text-secondary">
               ID: {targetUserId.substring(0, 8)}...
             </span>
           </div>
         </div>
         <button
           onClick={onClose}
-          className="text-[#9CA3AF] hover:text-white p-1 rounded transition-colors"
+          className="text-text-secondary hover:text-text-primary p-1 rounded transition-colors"
         >
           <X size={15} />
         </button>
@@ -167,15 +163,15 @@ export function ParticipantMenu({
             onClose();
             window.open(`/profile/${targetUserId}`, '_blank', 'noopener,noreferrer');
           }}
-          className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-[#E5E7EB] hover:bg-[#27272A] transition-colors"
+          className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-text-primary hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
         >
           <span>View Profile</span>
-          <ExternalLink size={13} className="text-[#9CA3AF]" />
+          <ExternalLink size={13} className="text-text-secondary" />
         </button>
 
         {/* Friend Request Section */}
         {loading ? (
-          <div className="flex items-center justify-center py-2 text-[#9CA3AF]">
+          <div className="flex items-center justify-center py-2 text-text-secondary">
             <Loader2 size={14} className="animate-spin" />
           </div>
         ) : (
@@ -184,7 +180,7 @@ export function ParticipantMenu({
               <button
                 onClick={handleSendRequest}
                 disabled={actionLoading}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-white bg-[#5C7A5A] hover:bg-[#4E684C] transition-colors disabled:opacity-50"
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-surface-raised bg-accent-green hover:opacity-90 transition-opacity disabled:opacity-50"
               >
                 <UserPlus size={14} />
                 <span>Send Friend Request</span>
@@ -192,14 +188,14 @@ export function ParticipantMenu({
             )}
 
             {status === 'pending_sent' && (
-              <div className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-[#9CA3AF] bg-[#27272A] border border-[#333333]">
-                <Clock size={14} className="text-[#A8A29E]" />
+              <div className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-text-secondary bg-surface border border-border-default">
+                <Clock size={14} className="text-text-muted" />
                 <span>Request Pending</span>
               </div>
             )}
 
             {status === 'friends' && (
-              <div className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-[#86EFAC] bg-[#163821] border border-[#225433]">
+              <div className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-accent-green bg-accent-green/10 border border-accent-green">
                 <Check size={14} />
                 <span>Friends</span>
               </div>
@@ -212,8 +208,8 @@ export function ParticipantMenu({
                 disabled={actionLoading}
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
                   status === 'blocked'
-                    ? 'text-[#FCA5A5] bg-[#3B1D1D] hover:bg-[#4D2424]'
-                    : 'text-[#9CA3AF] hover:text-[#F87171] hover:bg-[#27272A]'
+                    ? 'text-accent-terracotta bg-accent-terracotta/10 hover:bg-accent-terracotta/20'
+                    : 'text-text-secondary hover:text-accent-terracotta hover:bg-black/5 dark:hover:bg-white/5'
                 }`}
               >
                 <ShieldAlert size={14} />
@@ -228,7 +224,7 @@ export function ParticipantMenu({
           <button
             onClick={handleRemoveFromRoom}
             disabled={actionLoading}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-[#F87171] hover:bg-[#3B1D1D] transition-colors border border-transparent hover:border-[#7F1D1D] mt-1"
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-accent-terracotta hover:bg-accent-terracotta/10 transition-colors border border-transparent hover:border-accent-terracotta mt-1"
           >
             <LogOut size={14} />
             <span>Remove from room</span>

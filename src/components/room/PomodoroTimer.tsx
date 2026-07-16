@@ -124,8 +124,9 @@ export function PomodoroTimer({ isOwner, currentUserId }: PomodoroTimerProps) {
       
       {/* Phase Label */}
       <div 
-        className="font-mono text-[11px] tracking-[0.15em] mb-2"
-        style={{ color: phase === 'FOCUS' ? '#7A8B76' : '#888888' }}
+        className={`font-mono text-[11px] tracking-[0.15em] mb-2 ${
+          phase === 'FOCUS' ? 'text-accent-green font-semibold' : 'text-text-secondary'
+        }`}
       >
         {phase}
       </div>
@@ -136,26 +137,22 @@ export function PomodoroTimer({ isOwner, currentUserId }: PomodoroTimerProps) {
           <button
             onClick={() => handlePresetChange('25/5')}
             disabled={isRunning}
-            className="font-sans text-[12px] px-3 py-1 transition-colors rounded-[6px]"
-            style={{
-              backgroundColor: preset === '25/5' ? '#7A8B76' : '#333333',
-              color: preset === '25/5' ? '#F4F0EB' : '#888888',
-              cursor: isRunning ? 'not-allowed' : 'pointer',
-              opacity: isRunning ? 0.5 : 1,
-            }}
+            className={`font-sans text-[12px] px-3 py-1 transition-colors rounded-[6px] border ${
+              preset === '25/5'
+                ? 'bg-accent-green text-surface-raised border-accent-green'
+                : 'bg-surface text-text-secondary border-border-default hover:text-text-primary'
+            } ${isRunning ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
           >
             25 / 5
           </button>
           <button
             onClick={() => handlePresetChange('50/10')}
             disabled={isRunning}
-            className="font-sans text-[12px] px-3 py-1 transition-colors rounded-[6px]"
-            style={{
-              backgroundColor: preset === '50/10' ? '#7A8B76' : '#333333',
-              color: preset === '50/10' ? '#F4F0EB' : '#888888',
-              cursor: isRunning ? 'not-allowed' : 'pointer',
-              opacity: isRunning ? 0.5 : 1,
-            }}
+            className={`font-sans text-[12px] px-3 py-1 transition-colors rounded-[6px] border ${
+              preset === '50/10'
+                ? 'bg-accent-green text-surface-raised border-accent-green'
+                : 'bg-surface text-text-secondary border-border-default hover:text-text-primary'
+            } ${isRunning ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
           >
             50 / 10
           </button>
@@ -163,18 +160,18 @@ export function PomodoroTimer({ isOwner, currentUserId }: PomodoroTimerProps) {
       )}
 
       {/* Timer Digits */}
-      <div className="font-mono text-[48px] leading-none mb-1 tabular-nums" style={{ color: '#E8E8E8' }}>
+      <div className="font-mono text-[48px] leading-none mb-1 tabular-nums text-text-primary">
         {minutes}:{seconds}
       </div>
 
       {/* Sync status for non-owners */}
       {!isOwner && isRunning && (
-        <div className="font-sans text-[10px] mb-3" style={{ color: '#888888' }}>
+        <div className="font-sans text-[10px] mb-3 text-text-secondary">
           Synced with room
         </div>
       )}
       {!isOwner && !isRunning && (
-        <div className="font-sans text-[11px] mb-3" style={{ color: '#888888' }}>
+        <div className="font-sans text-[11px] mb-3 text-text-secondary">
           Waiting for owner to start...
         </div>
       )}
@@ -189,31 +186,28 @@ export function PomodoroTimer({ isOwner, currentUserId }: PomodoroTimerProps) {
             {!isRunning ? (
               <button 
                 onClick={start}
-                className="font-sans text-[12px] px-[14px] py-[6px] hover:bg-[#333333] hover:text-[#E8E8E8] transition-colors rounded-[6px]"
-                style={{ border: '1px solid #333333', color: '#E8E8E8', backgroundColor: 'transparent' }}
+                className="font-sans text-[12px] px-[14px] py-[6px] hover:bg-text-primary hover:text-surface-raised transition-colors rounded-[6px] border border-border-default text-text-primary bg-transparent"
               >
                 Start
               </button>
             ) : (
               <button 
                 onClick={pause}
-                className="font-sans text-[12px] px-[14px] py-[6px] hover:bg-[#333333] hover:text-[#E8E8E8] transition-colors rounded-[6px]"
-                style={{ border: '1px solid #333333', color: '#E8E8E8', backgroundColor: 'transparent' }}
+                className="font-sans text-[12px] px-[14px] py-[6px] hover:bg-text-primary hover:text-surface-raised transition-colors rounded-[6px] border border-border-default text-text-primary bg-transparent"
               >
                 Pause
               </button>
             )}
             <button 
               onClick={reset}
-              className="font-sans text-[12px] px-[14px] py-[6px] hover:bg-[#7A8B76] hover:border-[#7A8B76] hover:text-[#1A1A1A] transition-colors rounded-[6px]"
-              style={{ border: '1px solid #333333', color: '#E8E8E8', backgroundColor: 'transparent' }}
+              className="font-sans text-[12px] px-[14px] py-[6px] hover:bg-accent-green hover:border-accent-green hover:text-surface-raised transition-colors rounded-[6px] border border-border-default text-text-primary bg-transparent"
             >
               Reset
             </button>
           </div>
 
           {/* Owner label */}
-          <div className="font-sans text-[10px]" style={{ color: '#7A8B76' }}>
+          <div className="font-sans text-[10px] text-accent-green font-medium">
             You control the timer
           </div>
         </>

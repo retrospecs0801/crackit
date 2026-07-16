@@ -6,16 +6,20 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { GoogleSignInModal } from '@/components/auth/GoogleSignInModal';
 import { Avatar } from '@/components/ui/Avatar';
+import { Loader2 } from 'lucide-react';
 
 export function RoomCard({ room }: { room: Room }) {
   const router = useRouter();
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
   
   const displayMembers = room.members.slice(0, 4);
   const extraMembers = room.members.length - 4;
 
   const handleJoin = async () => {
-    if (room.isMock) return;
+    if (room.isMock || isJoining) return;
+    setJoinError(null);
 
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -25,7 +29,18 @@ export function RoomCard({ room }: { room: Room }) {
       return;
     }
 
-    router.push(`/room/${room.id}`);
+    setIsJoining(true);
+    try {
+      router.push(`/room/${room.id}`);
+      // Safety reset after 12s if navigation stalls
+      setTimeout(() => {
+        setIsJoining(false);
+      }, 12000);
+    } catch (e) {
+      console.error('Failed to navigate:', e);
+      setIsJoining(false);
+      setJoinError('Failed to join room. Try again.');
+    }
   };
 
   const getStatusColor = () => {
@@ -104,18 +119,32 @@ export function RoomCard({ room }: { room: Room }) {
             )}
           </div>
           
-          <button
-            onClick={handleJoin}
-            disabled={room.isMock}
-            className={`border rounded-[7px] font-sans font-semibold text-[12px] px-[14px] py-[6px] transition-colors duration-200 ${
-              room.isMock 
-                ? '' 
-                : 'bg-transparent border-border-default text-text-primary hover:bg-text-primary hover:text-surface-raised hover:border-text-primary'
-            }`}
-            style={room.isMock ? { backgroundColor: 'transparent', borderColor: 'var(--btn-demo-border)', color: 'var(--btn-demo-text)' } : {}}
-          >
-            {room.isMock ? 'Demo Only' : 'Join Room'}
-          </button>
+          <div className="flex flex-col items-end gap-1">
+            <button
+              onClick={handleJoin}
+              disabled={room.isMock || isJoining}
+              className={`border rounded-[7px] font-sans font-semibold text-[12px] px-[14px] py-[6px] transition-colors duration-200 flex items-center justify-center ${
+                room.isMock || isJoining
+                  ? 'opacity-70 cursor-not-allowed'
+                  : 'bg-transparent border-border-default text-text-primary hover:bg-text-primary hover:text-surface-raised hover:border-text-primary'
+              }`}
+              style={room.isMock ? { backgroundColor: 'transparent', borderColor: 'var(--btn-demo-border)', color: 'var(--btn-demo-text)' } : {}}
+            >
+              {isJoining ? (
+                <>
+                  <Loader2 className="animate-spin w-3.5 h-3.5 inline mr-1.5" />
+                  Joining...
+                </>
+              ) : room.isMock ? (
+                'Demo Only'
+              ) : (
+                'Join Room'
+              )}
+            </button>
+            {joinError && (
+              <span className="font-mono text-[10px] text-accent-terracotta">{joinError}</span>
+            )}
+          </div>
         </div>
         
       </div>

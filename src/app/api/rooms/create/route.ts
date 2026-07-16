@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 
     await svc.createRoom({
       name: roomDetails.id,
-      emptyTimeout: 10 * 60, // 10 minutes (give creator plenty of time to join)
+      emptyTimeout: 5 * 60, // 5 minutes (auto-delete empty room after 5 min)
       maxParticipants: roomDetails.maxStudents || 10,
       metadata: JSON.stringify(roomDetails),
     });
