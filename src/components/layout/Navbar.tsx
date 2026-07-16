@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { GoogleSignInModal } from '@/components/auth/GoogleSignInModal';
 import { Avatar } from '@/components/ui/Avatar';
 import { NotificationsBell } from '@/components/layout/NotificationsBell';
+import { MessagesButton } from '@/components/messaging/MessagesButton';
 
 export function Navbar({ onCreateRoom }: { onCreateRoom: () => void }) {
   const [currentUser, setCurrentUser] = useState<{
@@ -50,7 +51,7 @@ export function Navbar({ onCreateRoom }: { onCreateRoom: () => void }) {
                   .from('profiles')
                   .update({ avatar_url: googlePhoto })
                   .eq('id', profile.id);
-              } catch {}
+              } catch { }
             }
 
             const u = {
@@ -63,7 +64,7 @@ export function Navbar({ onCreateRoom }: { onCreateRoom: () => void }) {
             setCurrentUser(u);
             try {
               localStorage.setItem('studyhall_current_user', JSON.stringify(u));
-            } catch {}
+            } catch { }
           }
         } else {
           setCurrentUser(null);
@@ -123,7 +124,7 @@ export function Navbar({ onCreateRoom }: { onCreateRoom: () => void }) {
           <div className="w-[8px] h-[8px] rounded-full bg-accent-green"></div>
           StudyHall
         </Link>
-        
+
         <div className="flex items-center gap-4">
           <button
             onClick={toggleDarkMode}
@@ -137,6 +138,7 @@ export function Navbar({ onCreateRoom }: { onCreateRoom: () => void }) {
           {currentUser ? (
             <div className="flex items-center gap-2">
               <NotificationsBell userId={currentUser.id} />
+              <MessagesButton userId={currentUser.id} />
               <Link
                 href="/profile"
                 className="flex items-center h-[32px] rounded-full border border-border-default bg-canvas overflow-hidden pr-3 hover:opacity-80 transition-opacity"
