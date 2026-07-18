@@ -56,6 +56,20 @@ function CompleteProfileForm() {
     setSubmitting(true);
     setError(null);
 
+    const supabase = createClient();
+    const { data: duplicate } = await supabase
+      .from('profiles')
+      .select('id')
+      .ilike('display_name', trimmed)
+      .neq('id', userId)
+      .maybeSingle();
+
+    if (duplicate) {
+      setError('This display name is already taken by another student. Please choose a unique display name.');
+      setSubmitting(false);
+      return;
+    }
+
     const initials = trimmed.substring(0, 2).toUpperCase();
     const color = getAvatarColor(trimmed);
 

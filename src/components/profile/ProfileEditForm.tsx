@@ -65,6 +65,20 @@ export function ProfileEditForm({
 
     try {
       const supabase = createClient();
+
+      const { data: duplicate } = await supabase
+        .from('profiles')
+        .select('id')
+        .ilike('display_name', displayName.trim())
+        .neq('id', profile.id)
+        .maybeSingle();
+
+      if (duplicate) {
+        setError('This display name is already taken by another student. Please choose a unique display name.');
+        setSaving(false);
+        return;
+      }
+
       let newAvatarUrl: string | null = profile.avatar_url;
 
       if (selectedFile) {

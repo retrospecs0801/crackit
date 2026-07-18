@@ -154,11 +154,13 @@ export default function RoomPage({ params }: { params: { id: string } }) {
         .single();
 
       const displayName = profile?.display_name || user.user_metadata?.full_name || 'Student';
+      const avatarUrl = profile?.avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture || null;
       const userObj: User = {
         id: user.id,
         displayName,
         avatarInitials: profile?.avatar_initials || displayName.substring(0, 2).toUpperCase(),
         avatarColor: profile?.avatar_color || getAvatarColor(displayName),
+        avatarUrl,
       };
 
       setCurrentUser(userObj);
