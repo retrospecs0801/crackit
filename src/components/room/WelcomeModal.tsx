@@ -17,7 +17,7 @@ export function WelcomeModal({
   onConfirm,
 }: WelcomeModalProps) {
   const examInfo = EXAM_OPTIONS.find((opt) => opt.id === examTag || opt.name === examTag);
-  const flag = examInfo ? examInfo.flag : '🇮🇳';
+  const examDisplayName = examInfo ? examInfo.name : examTag;
 
   return (
     <div
@@ -31,8 +31,7 @@ export function WelcomeModal({
         <div className="flex flex-col px-6 pt-6 pb-4 border-b border-border-default bg-surface">
           <div className="flex items-center gap-2 mb-2">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent-green/15 text-accent-green font-sans font-semibold text-[11px] uppercase tracking-wider border border-accent-green/30">
-              <span>{flag}</span>
-              <span>{examTag}</span>
+              <span>{examDisplayName}</span>
             </span>
             <span className="font-mono text-[11px] text-text-secondary uppercase tracking-widest">
               Room Expectations
