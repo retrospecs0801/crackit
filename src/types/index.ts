@@ -1,5 +1,20 @@
 export type ExamTag = 'JEE' | 'NEET' | 'UPSC' | 'CBSE' | 'CAT' | 'OTHER';
 
+export type ExamOption = {
+  id: ExamTag;
+  name: string;
+  flag: string;
+};
+
+export const EXAM_OPTIONS: ExamOption[] = [
+  { id: 'JEE', name: 'JEE', flag: '📐' },
+  { id: 'NEET', name: 'NEET', flag: '🩺' },
+  { id: 'UPSC', name: 'UPSC', flag: '🏛️' },
+  { id: 'CBSE', name: 'CBSE', flag: '📚' },
+  { id: 'CAT', name: 'CAT', flag: '📊' },
+  { id: 'OTHER', name: 'OTHER', flag: '🎯' },
+];
+
 export type User = {
   id: string;
   displayName: string;
