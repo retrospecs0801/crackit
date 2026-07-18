@@ -102,7 +102,7 @@ export function RoomSettingsApp({ roomData, onUpdateRoom }: RoomSettingsAppProps
       </div>
 
       <div>
-        <label className={labelStyles}>Exam Type (Immutable)</label>
+        <label className={labelStyles}>Exam Type </label>
         <div className="flex items-center px-3 h-[36px] border border-border-default bg-surface-raised rounded-lg text-text-secondary font-sans text-[13px]">
           {roomData.examTag}
         </div>
@@ -169,7 +169,7 @@ export function RoomSettingsApp({ roomData, onUpdateRoom }: RoomSettingsAppProps
         <div className="flex items-center justify-between">
           <div className="flex flex-col">
             <span className="font-sans text-[12px] text-text-primary">Disable Microphones</span>
-            <span className="font-sans text-[10px] text-text-secondary">Lock student audio transmission</span>
+            
           </div>
           <button
             type="button"
@@ -186,7 +186,7 @@ export function RoomSettingsApp({ roomData, onUpdateRoom }: RoomSettingsAppProps
         <div className="flex items-center justify-between">
           <div className="flex flex-col">
             <span className="font-sans text-[12px] text-text-primary">Disable Cameras</span>
-            <span className="font-sans text-[10px] text-text-secondary">Lock student video transmission</span>
+           
           </div>
           <button
             type="button"
@@ -203,7 +203,7 @@ export function RoomSettingsApp({ roomData, onUpdateRoom }: RoomSettingsAppProps
         <div className="flex items-center justify-between">
           <div className="flex flex-col">
             <span className="font-sans text-[12px] text-text-primary">Disable Text Chat</span>
-            <span className="font-sans text-[10px] text-text-secondary">Lock sidebar room chat feed</span>
+          
           </div>
           <button
             type="button"

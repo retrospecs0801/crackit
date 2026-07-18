@@ -129,7 +129,11 @@ export async function GET() {
       }
     }
 
-    return NextResponse.json(activeRooms);
+    return NextResponse.json(activeRooms, {
+      headers: {
+        'Cache-Control': 'no-store, max-age=0',
+      },
+    });
   } catch (error: unknown) {
     console.error('[Room API Error] Fatal error in GET /api/rooms:', error);
     const message = error instanceof Error ? error.message : 'Failed to list rooms';

@@ -42,7 +42,7 @@ export default function Home() {
 
       let liveRooms: Room[] = [];
       try {
-        const res = await fetch('/api/rooms');
+        const res = await fetch('/api/rooms', { cache: 'no-store' });
         if (res.ok) {
           liveRooms = await res.json();
         }

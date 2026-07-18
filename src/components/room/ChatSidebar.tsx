@@ -41,7 +41,7 @@ export function ChatSidebar({
         {welcomeMessageText && (
           <div className="mb-3 p-3.5 rounded-[10px] border border-accent-green/30 bg-accent-green/5 text-[12px] font-sans text-text-primary flex flex-col gap-1.5 shadow-sm">
             <span className="font-bold text-accent-green text-[10px] uppercase tracking-wider flex items-center gap-1.5">
-              <span>📌</span> Room Rules & Info
+              <span></span> Room Rules & Info
             </span>
             <div className="whitespace-pre-wrap leading-relaxed text-text-secondary">{welcomeMessageText}</div>
           </div>

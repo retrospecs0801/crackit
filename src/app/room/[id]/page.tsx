@@ -225,7 +225,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
 
       // 4. Fetch from LiveKit API (for users joining via shared link)
       try {
-        const res = await fetch('/api/rooms');
+        const res = await fetch('/api/rooms', { cache: 'no-store' });
         if (res.ok) {
           const liveRooms: Room[] = await res.json();
           const found = liveRooms.find(r => r.id === params.id);
