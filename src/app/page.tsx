@@ -92,6 +92,38 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
+  const activeTabs: FilterType[] = (() => {
+    const counts: Record<string, number> = {};
+    for (const r of allRooms) {
+      if (r.examTag) {
+        counts[r.examTag] = (counts[r.examTag] || 0) + 1;
+      }
+    }
+
+    // Sort unique active tags descending by room count
+    const sortedActive = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+
+    const result = [...sortedActive];
+
+    const defaultPriority: ExamTag[] = [
+      'JEE Main/Advanced',
+      'NEET-UG',
+      'UPSC CSE',
+      'MCAT',
+      'LSAT',
+      'OTHER'
+    ];
+
+    for (const priority of defaultPriority) {
+      if (result.length >= 5) break;
+      if (!result.includes(priority)) {
+        result.push(priority);
+      }
+    }
+
+    return ['ALL', ...result] as FilterType[];
+  })();
+
   const filteredRooms =
     activeFilter === 'ALL'
       ? allRooms
@@ -106,6 +138,7 @@ export default function Home() {
         <ExamFilterBar
           activeFilter={activeFilter}
           onFilterChange={setActiveFilter}
+          tabs={activeTabs}
         />
         <RoomGrid
           rooms={filteredRooms}

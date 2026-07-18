@@ -3,12 +3,19 @@
 import { useState, useEffect } from 'react';
 import { useDataChannel } from '@livekit/components-react';
 
+import { Room } from '@/types';
+import { RoomSettingsApp } from './RoomSettingsApp';
+
 interface AppsTrayProps {
   roomId: string;
   currentUserId: string;
+  currentUserIdStr?: string;
+  isOwner?: boolean;
+  roomData?: Room;
+  onUpdateRoom?: (updated: Partial<Room>) => void;
 }
 
-type ExpandedApp = 'todo' | 'youtube' | null;
+type ExpandedApp = 'todo' | 'youtube' | 'settings' | null;
 
 interface Todo {
   id: string;
@@ -16,7 +23,14 @@ interface Todo {
   done: boolean;
 }
 
-export function AppsTray({ roomId, currentUserId }: AppsTrayProps) {
+export function AppsTray({
+  roomId,
+  currentUserId,
+  currentUserIdStr = '',
+  isOwner = false,
+  roomData,
+  onUpdateRoom,
+}: AppsTrayProps) {
   const [expandedApp, setExpandedApp] = useState<ExpandedApp>(null);
 
   // Todo App State
@@ -98,6 +112,15 @@ export function AppsTray({ roomId, currentUserId }: AppsTrayProps) {
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-primary"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
             <span className="font-sans text-[13px] text-text-primary">Todo</span>
           </button>
+          {isOwner && (
+            <button 
+              onClick={() => setExpandedApp('settings')}
+              className="flex flex-col items-center justify-center gap-2 hover:bg-black/5 dark:hover:bg-white/5 transition-colors bg-surface-raised rounded-[8px] border border-border-default p-4"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-primary"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+              <span className="font-sans text-[13px] text-text-primary">Settings</span>
+            </button>
+          )}
         </div>
       </div>
     );
@@ -122,7 +145,7 @@ export function AppsTray({ roomId, currentUserId }: AppsTrayProps) {
             <h2 className="font-sans text-[14px] text-text-primary font-bold">Todo</h2>
             <form onSubmit={handleAddTodo} className="flex gap-2">
               <input 
-                type="text"
+                type="text" 
                 value={todoInput}
                 onChange={e => setTodoInput(e.target.value)}
                 placeholder="What needs to be done?"
@@ -175,7 +198,7 @@ export function AppsTray({ roomId, currentUserId }: AppsTrayProps) {
             <h2 className="font-sans text-[14px] text-text-primary font-bold">YouTube</h2>
             <form onSubmit={handleLoadYouTube} className="flex gap-2">
               <input 
-                type="text"
+                type="text" 
                 value={youtubeUrl}
                 onChange={e => setYoutubeUrl(e.target.value)}
                 placeholder="Paste YouTube URL or search..."
@@ -203,6 +226,13 @@ export function AppsTray({ roomId, currentUserId }: AppsTrayProps) {
               </div>
             )}
           </>
+        )}
+
+        {expandedApp === 'settings' && isOwner && roomData && onUpdateRoom && (
+          <RoomSettingsApp
+            roomData={roomData}
+            onUpdateRoom={onUpdateRoom}
+          />
         )}
       </div>
     </div>

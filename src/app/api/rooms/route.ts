@@ -106,6 +106,11 @@ export async function GET() {
         owner_id: dbRoom.owner_id || '',
         ownerId: dbRoom.owner_id || '',
         createdAt: dbRoom.created_at || new Date().toISOString(),
+        welcomeMessageEnabled: dbRoom.welcome_message_enabled,
+        welcomeMessageText: dbRoom.welcome_message_text || '',
+        micDisabled: dbRoom.mic_disabled,
+        cameraDisabled: dbRoom.camera_disabled,
+        chatDisabled: dbRoom.chat_disabled,
       };
 
       activeRooms.push(roomObj);

@@ -3,7 +3,15 @@
 import { useState, useRef, useEffect } from 'react';
 import { useChat } from '@livekit/components-react';
 
-export function ChatSidebar({ roomId }: { roomId: string }) {
+export function ChatSidebar({
+  roomId,
+  chatDisabled = false,
+  welcomeMessageText,
+}: {
+  roomId: string;
+  chatDisabled?: boolean;
+  welcomeMessageText?: string;
+}) {
   const { chatMessages, send } = useChat();
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -15,7 +23,7 @@ export function ChatSidebar({ roomId }: { roomId: string }) {
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim()) return;
+    if (!inputValue.trim() || chatDisabled) return;
 
     try {
       await send(inputValue);
@@ -29,6 +37,16 @@ export function ChatSidebar({ roomId }: { roomId: string }) {
     <div className="flex flex-col h-full overflow-hidden bg-transparent">
       {/* Message List */}
       <div className="flex-1 overflow-y-auto flex flex-col gap-2 pr-2" style={{ scrollbarWidth: 'thin' }}>
+        {/* Local Welcome/Rules banner at top of the feed */}
+        {welcomeMessageText && (
+          <div className="mb-3 p-3.5 rounded-[10px] border border-accent-green/30 bg-accent-green/5 text-[12px] font-sans text-text-primary flex flex-col gap-1.5 shadow-sm">
+            <span className="font-bold text-accent-green text-[10px] uppercase tracking-wider flex items-center gap-1.5">
+              <span>📌</span> Room Rules & Info
+            </span>
+            <div className="whitespace-pre-wrap leading-relaxed text-text-secondary">{welcomeMessageText}</div>
+          </div>
+        )}
+
         {chatMessages.map((msg) => {
           const timeString = new Date(msg.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
           const displayName = msg.from?.name || msg.from?.identity || 'Anonymous';
@@ -51,17 +69,23 @@ export function ChatSidebar({ roomId }: { roomId: string }) {
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Type a message..."
-            className="flex-1 font-sans text-[13px] px-3 py-1.5 outline-none focus:border-accent-green transition-colors placeholder-text-secondary bg-surface-raised border border-border-default rounded-[6px] text-text-primary"
+            disabled={chatDisabled}
+            placeholder={chatDisabled ? "Chat is disabled" : "Type a message..."}
+            className="flex-1 font-sans text-[13px] px-3 py-1.5 outline-none focus:border-accent-green transition-colors placeholder-text-secondary bg-surface-raised border border-border-default rounded-[6px] text-text-primary disabled:opacity-60 disabled:cursor-not-allowed"
           />
           <button
             type="submit"
-            disabled={!inputValue.trim()}
+            disabled={!inputValue.trim() || chatDisabled}
             className="font-sans text-[12px] px-3 py-1.5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-transparent border border-border-default rounded-[6px] text-text-primary"
           >
             Send
           </button>
         </form>
+        {chatDisabled && (
+          <div className="font-sans text-[10px] text-accent-terracotta mt-1 text-center font-medium">
+            Chat has been disabled by the room owner.
+          </div>
+        )}
       </div>
     </div>
   );

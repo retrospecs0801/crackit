@@ -5,11 +5,10 @@ type FilterType = ExamTag | 'ALL';
 interface ExamFilterBarProps {
   activeFilter: FilterType;
   onFilterChange: (filter: FilterType) => void;
+  tabs: FilterType[];
 }
 
-export function ExamFilterBar({ activeFilter, onFilterChange }: ExamFilterBarProps) {
-  const tabs: FilterType[] = ['ALL', 'JEE', 'NEET', 'UPSC', 'CBSE', 'CAT'];
-
+export function ExamFilterBar({ activeFilter, onFilterChange, tabs }: ExamFilterBarProps) {
   return (
     <div className="w-full sticky top-[56px] z-40 py-2 border-b" style={{ backgroundColor: 'var(--nav-bg)', borderColor: 'var(--card-border)', backdropFilter: 'blur(12px)' }}>
       <div className="flex overflow-x-auto md:flex-wrap hide-scrollbar px-6 gap-2">

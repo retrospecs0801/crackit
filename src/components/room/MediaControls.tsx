@@ -1,14 +1,39 @@
 'use client';
 
+import { useEffect } from 'react'
 import { useTrackToggle } from '@livekit/components-react'
 import { Track } from 'livekit-client'
 import { useRouter } from 'next/navigation'
 import { LogOut, Mic, MicOff, Video, VideoOff } from 'lucide-react'
 
-export default function MediaControls() {
+interface MediaControlsProps {
+  micDisabled?: boolean;
+  cameraDisabled?: boolean;
+}
+
+export default function MediaControls({
+  micDisabled = false,
+  cameraDisabled = false,
+}: MediaControlsProps) {
   const router = useRouter()
   const { buttonProps: micProps, enabled: micEnabled } = useTrackToggle({ source: Track.Source.Microphone })
   const { buttonProps: camProps, enabled: camEnabled } = useTrackToggle({ source: Track.Source.Camera })
+
+  // Auto-mute if host locks microphone
+  useEffect(() => {
+    if (micDisabled && micEnabled && micProps.onClick) {
+      const mockEvent = { preventDefault: () => {} } as React.MouseEvent<HTMLButtonElement>;
+      micProps.onClick(mockEvent);
+    }
+  }, [micDisabled, micEnabled, micProps]);
+
+  // Auto-disable video if host locks camera
+  useEffect(() => {
+    if (cameraDisabled && camEnabled && camProps.onClick) {
+      const mockEvent = { preventDefault: () => {} } as React.MouseEvent<HTMLButtonElement>;
+      camProps.onClick(mockEvent);
+    }
+  }, [cameraDisabled, camEnabled, camProps]);
 
   return (
     <div
@@ -20,10 +45,15 @@ export default function MediaControls() {
     >
       <button
         {...micProps}
-        className={`w-10 h-10 border-none rounded-[8px] flex items-center justify-center transition-colors duration-150 text-white ${micEnabled ? 'bg-black/20 dark:bg-white/10 hover:bg-black/30 dark:hover:bg-white/20 text-text-primary' : 'bg-[#C1654A] hover:bg-[#B5563E] text-white'
-          }`}
+        disabled={micDisabled}
+        title={micDisabled ? "Microphone is disabled by host" : "Toggle Mic"}
+        className={`w-10 h-10 border-none rounded-[8px] flex items-center justify-center transition-colors duration-150 text-white disabled:opacity-40 disabled:cursor-not-allowed ${
+          micEnabled && !micDisabled
+            ? 'bg-black/20 dark:bg-white/10 hover:bg-black/30 dark:hover:bg-white/20 text-text-primary' 
+            : 'bg-[#C1654A] hover:bg-[#B5563E] text-white'
+        }`}
       >
-        {micEnabled
+        {micEnabled && !micDisabled
           ? <Mic size={18} className="text-text-primary" />
           : <MicOff size={18} className="text-white" />
         }
@@ -31,10 +61,15 @@ export default function MediaControls() {
 
       <button
         {...camProps}
-        className={`w-10 h-10 border-none rounded-[8px] flex items-center justify-center transition-colors duration-150 text-white ${camEnabled ? 'bg-black/20 dark:bg-white/10 hover:bg-black/30 dark:hover:bg-white/20 text-text-primary' : 'bg-[#C1654A] hover:bg-[#B5563E] text-white'
-          }`}
+        disabled={cameraDisabled}
+        title={cameraDisabled ? "Camera is disabled by host" : "Toggle Camera"}
+        className={`w-10 h-10 border-none rounded-[8px] flex items-center justify-center transition-colors duration-150 text-white disabled:opacity-40 disabled:cursor-not-allowed ${
+          camEnabled && !cameraDisabled
+            ? 'bg-black/20 dark:bg-white/10 hover:bg-black/30 dark:hover:bg-white/20 text-text-primary' 
+            : 'bg-[#C1654A] hover:bg-[#B5563E] text-white'
+        }`}
       >
-        {camEnabled
+        {camEnabled && !cameraDisabled
           ? <Video size={18} className="text-text-primary" />
           : <VideoOff size={18} className="text-white" />
         }
