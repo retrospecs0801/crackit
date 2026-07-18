@@ -18,18 +18,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid room details' }, { status: 400 });
     }
 
+    const fullRoomDetails: Room = {
+      ...roomDetails,
+      maxStudents: roomDetails.maxStudents || 6,
+      welcomeMessageEnabled: roomDetails.welcomeMessageEnabled || false,
+      welcomeMessageText: roomDetails.welcomeMessageText || undefined,
+      micDisabled: roomDetails.micDisabled || false,
+      cameraDisabled: roomDetails.cameraDisabled || false,
+      chatDisabled: roomDetails.chatDisabled || false,
+    };
+
     // Use http(s) for the server API client if the URL is ws(s)
     const serverUrl = livekitUrl.replace('wss://', 'https://').replace('ws://', 'http://');
     const svc = new RoomServiceClient(serverUrl, apiKey, apiSecret);
 
     await svc.createRoom({
-      name: roomDetails.id,
+      name: fullRoomDetails.id,
       emptyTimeout: 5 * 60, // 5 minutes (auto-delete empty room after 5 min)
-      maxParticipants: roomDetails.maxStudents || 10,
-      metadata: JSON.stringify(roomDetails),
+      maxParticipants: fullRoomDetails.maxStudents,
+      metadata: JSON.stringify(fullRoomDetails),
     });
 
-    return NextResponse.json({ success: true, room: roomDetails });
+    return NextResponse.json({ success: true, room: fullRoomDetails });
   } catch (error: unknown) {
     console.error('Failed to create room:', error);
     const message = error instanceof Error ? error.message : 'Failed to create room';

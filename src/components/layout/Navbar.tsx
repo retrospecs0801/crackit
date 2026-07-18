@@ -16,7 +16,15 @@ export function Navbar({ onCreateRoom }: { onCreateRoom: () => void }) {
     avatarInitials: string;
     avatarColor: string;
     avatarUrl?: string | null;
-  } | null>(null);
+  } | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('studyhall_current_user');
+        if (cached) return JSON.parse(cached);
+      } catch { }
+    }
+    return null;
+  });
 
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);

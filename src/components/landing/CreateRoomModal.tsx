@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ExamTag, Room } from '@/types';
+import { ExamTag, Room, EXAM_OPTIONS } from '@/types';
 import { createClient } from '@/lib/supabase/client';
 
 interface CreateRoomModalProps {
@@ -14,11 +14,10 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
   const router = useRouter();
   const modalRef = useRef<HTMLDivElement>(null);
   
-  const [examType, setExamType] = useState<ExamTag>('JEE');
+  const [examType, setExamType] = useState<ExamTag>('JEE Main/Advanced');
   const [roomName, setRoomName] = useState('');
-  const [topic, setTopic] = useState('');
-  const [description, setDescription] = useState('');
-  const [maxStudents, setMaxStudents] = useState(6);
+  const [welcomeMessageEnabled, setWelcomeMessageEnabled] = useState(false);
+  const [welcomeMessageText, setWelcomeMessageText] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -44,15 +43,13 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
     const existingErrors = form.querySelectorAll('.custom-error-msg');
     existingErrors.forEach(el => el.remove());
     
-    const inputs = form.querySelectorAll('input');
-    inputs.forEach(input => {
-      input.style.border = '';
+    const inputs = form.querySelectorAll('input, select, textarea');
+    inputs.forEach((input: Element) => {
+      (input as HTMLElement).style.border = '';
     });
 
     let hasError = false;
-
     const roomNameInput = form.querySelector('input[placeholder="e.g. Late Night JEE Grind"]') as HTMLInputElement;
-    const topicInput = form.querySelector('input[placeholder="What are you studying today?"]') as HTMLInputElement;
 
     if (!roomName.trim() && roomNameInput) {
       roomNameInput.style.border = '1px solid #BC6C4F';
@@ -64,19 +61,6 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
       errorMsg.style.marginTop = '4px';
       errorMsg.innerText = 'Room name cannot be empty';
       roomNameInput.parentElement?.appendChild(errorMsg);
-      hasError = true;
-    }
-
-    if (!topic.trim() && topicInput) {
-      topicInput.style.border = '1px solid #BC6C4F';
-      const errorMsg = document.createElement('div');
-      errorMsg.className = 'custom-error-msg';
-      errorMsg.style.color = '#BC6C4F';
-      errorMsg.style.fontFamily = '"JetBrains Mono", monospace';
-      errorMsg.style.fontSize = '11px';
-      errorMsg.style.marginTop = '4px';
-      errorMsg.innerText = 'Topic cannot be empty';
-      topicInput.parentElement?.appendChild(errorMsg);
       hasError = true;
     }
 
@@ -99,16 +83,19 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
     
     const room: Room = {
       id,
-      name: roomName,
+      name: roomName.trim(),
       examTag: examType,
-      topic,
-      description,
-      maxStudents: Number(maxStudents),
+      maxStudents: 6,
       currentStudents: 1,
       members: [],
       owner_id: user.id,
       ownerId: user.id,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      welcomeMessageEnabled,
+      welcomeMessageText: welcomeMessageEnabled ? welcomeMessageText.trim() : undefined,
+      micDisabled: false,
+      cameraDisabled: false,
+      chatDisabled: false,
     };
     
     try {
@@ -117,11 +104,14 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
         id: room.id,
         name: room.name,
         exam_tag: room.examTag,
-        topic: room.topic,
-        description: room.description,
         max_students: room.maxStudents,
         owner_id: user.id,
         created_at: room.createdAt,
+        welcome_message_enabled: room.welcomeMessageEnabled || false,
+        welcome_message_text: room.welcomeMessageText || null,
+        mic_disabled: false,
+        camera_disabled: false,
+        chat_disabled: false,
       });
 
       if (supabaseError) {
@@ -188,12 +178,11 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
               onChange={(e) => setExamType(e.target.value as ExamTag)}
               className={inputStyles}
             >
-              <option value="JEE">JEE</option>
-              <option value="NEET">NEET</option>
-              <option value="UPSC">UPSC</option>
-              <option value="CBSE">CBSE</option>
-              <option value="CAT">CAT</option>
-              <option value="OTHER">OTHER</option>
+              {EXAM_OPTIONS.map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.flag} {opt.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -209,39 +198,43 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
             />
           </div>
 
-          <div>
-            <label className={labelStyles}>Topic</label>
-            <input 
-              type="text" 
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              placeholder="What are you studying today?"
-              className={inputStyles}
-            />
-          </div>
+          {/* Welcome Message Toggle & Textarea */}
+          <div className="border border-border-default rounded-lg p-3.5 bg-surface transition-all">
+            <div className="flex items-center justify-between cursor-pointer" onClick={() => setWelcomeMessageEnabled(!welcomeMessageEnabled)}>
+              <div className="flex flex-col">
+                <span className="font-sans font-semibold text-[13px] text-text-primary">Welcome Message</span>
+                <span className="font-sans text-[11px] text-text-secondary">Show rules & expectations before others join</span>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setWelcomeMessageEnabled(!welcomeMessageEnabled);
+                }}
+                className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-200 focus:outline-none ${
+                  welcomeMessageEnabled ? 'bg-accent-green' : 'bg-border-default'
+                }`}
+              >
+                <div
+                  className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
+                    welcomeMessageEnabled ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
 
-          <div>
-            <label className={labelStyles}>Description</label>
-            <textarea 
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Optional context for others..."
-              rows={3}
-              className={`${inputStyles} resize-none py-2 h-auto`}
-              style={{ minHeight: '80px' }}
-            />
-          </div>
-
-          <div>
-            <label className={labelStyles}>Max Students</label>
-            <input 
-              type="number" 
-              min={2}
-              max={12}
-              value={maxStudents}
-              onChange={(e) => setMaxStudents(parseInt(e.target.value))}
-              className={inputStyles}
-            />
+            {welcomeMessageEnabled && (
+              <div className="mt-3 pt-3 border-t border-border-default animate-in fade-in duration-200">
+                <label className={labelStyles}>Message Text</label>
+                <textarea
+                  value={welcomeMessageText}
+                  onChange={(e) => setWelcomeMessageText(e.target.value)}
+                  placeholder="e.g. 1. Keep cameras ON during focus blocks. 2. Use chat for questions. 3. Mics muted unless asked."
+                  rows={3}
+                  className="w-full border border-border-default bg-surface-raised rounded-lg font-sans text-[13px] p-2.5 text-text-primary outline-none focus:border-accent-green transition-all resize-none placeholder:text-text-muted"
+                />
+              </div>
+            )}
           </div>
 
           <button 
