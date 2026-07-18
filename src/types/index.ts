@@ -1,18 +1,61 @@
-export type ExamTag = 'JEE' | 'NEET' | 'UPSC' | 'CBSE' | 'CAT' | 'OTHER';
+export type ExamTag =
+  | 'JEE Main/Advanced'
+  | 'NEET-UG'
+  | 'UPSC CSE'
+  | 'MCAT'
+  | 'LSAT'
+  | 'Suneung (CSAT)'
+  | 'UCAT'
+  | 'USMLE Step 1'
+  | 'CFA (All Levels)'
+  | 'Abitur'
+  | 'CAT'
+  | 'GATE'
+  | 'BMAT'
+  | 'LNAT'
+  | 'Civil Service (5,7,9)'
+  | 'TestDaF/DSH'
+  | 'TMS (Med)'
+  | 'Bar Exam'
+  | 'NCLEX'
+  | 'ENEM'
+  | 'OTHER'
+  | 'JEE'
+  | 'NEET'
+  | 'UPSC'
+  | 'CBSE';
 
 export type ExamOption = {
   id: ExamTag;
   name: string;
-  flag: string;
 };
 
 export const EXAM_OPTIONS: ExamOption[] = [
-  { id: 'JEE', name: 'JEE', flag: '📐' },
-  { id: 'NEET', name: 'NEET', flag: '🩺' },
-  { id: 'UPSC', name: 'UPSC', flag: '🏛️' },
-  { id: 'CBSE', name: 'CBSE', flag: '📚' },
-  { id: 'CAT', name: 'CAT', flag: '📊' },
-  { id: 'OTHER', name: 'OTHER', flag: '🎯' },
+  { name: 'JEE Main/Advanced', id: 'JEE Main/Advanced' },
+  { name: 'NEET-UG', id: 'NEET-UG' },
+  { name: 'UPSC CSE', id: 'UPSC CSE' },
+  { name: 'MCAT', id: 'MCAT' },
+  { name: 'LSAT', id: 'LSAT' },
+  { name: 'Suneung (CSAT)', id: 'Suneung (CSAT)' },
+  { name: 'UCAT', id: 'UCAT' },
+  { name: 'USMLE Step 1', id: 'USMLE Step 1' },
+  { name: 'CFA (All Levels)', id: 'CFA (All Levels)' },
+  { name: 'Abitur', id: 'Abitur' },
+  { name: 'CAT', id: 'CAT' },
+  { name: 'GATE', id: 'GATE' },
+  { name: 'BMAT', id: 'BMAT' },
+  { name: 'LNAT', id: 'LNAT' },
+  { name: 'Civil Service (5,7,9)', id: 'Civil Service (5,7,9)' },
+  { name: 'TestDaF/DSH', id: 'TestDaF/DSH' },
+  { name: 'TMS (Med)', id: 'TMS (Med)' },
+  { name: 'Bar Exam', id: 'Bar Exam' },
+  { name: 'NCLEX', id: 'NCLEX' },
+  { name: 'ENEM', id: 'ENEM' },
+  { name: 'JEE (Short)', id: 'JEE' },
+  { name: 'NEET (Short)', id: 'NEET' },
+  { name: 'UPSC (Short)', id: 'UPSC' },
+  { name: 'CBSE', id: 'CBSE' },
+  { name: 'OTHER', id: 'OTHER' },
 ];
 
 export type User = {
