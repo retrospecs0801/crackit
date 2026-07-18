@@ -164,31 +164,31 @@ export async function findOrCreateConversation(
   }
 
   // Create new conversation
+  const newConvId = crypto.randomUUID();
   const now = new Date().toISOString();
-  const { data: newConv, error: convError } = await supabase
+  const { error: convError } = await supabase
     .from('conversations')
-    .insert({ created_at: now, updated_at: now })
-    .select('*')
-    .single();
+    .insert({ id: newConvId, created_at: now, updated_at: now });
 
-  if (convError || !newConv) {
-    throw new Error(`Failed to create conversation: ${convError?.message || 'Unknown error'}`);
+  if (convError) {
+    throw new Error(`Failed to create conversation: ${convError.message || 'Unknown error'}`);
   }
 
   // Insert both participants
   const { error: partError } = await supabase
     .from('conversation_participants')
     .insert([
-      { conversation_id: newConv.id, user_id: currentUserId, created_at: now },
-      { conversation_id: newConv.id, user_id: otherUserId, created_at: now },
+      { conversation_id: newConvId, user_id: currentUserId, created_at: now },
+      { conversation_id: newConvId, user_id: otherUserId, created_at: now },
     ]);
 
   if (partError) {
     // Attempt cleanup if participants failed
-    await supabase.from('conversations').delete().eq('id', newConv.id);
+    await supabase.from('conversations').delete().eq('id', newConvId);
     throw new Error(`Failed to add participants: ${partError.message}`);
   }
 
+  const newConv = { id: newConvId, created_at: now, updated_at: now };
   return { conversation: newConv, otherUser: otherProfile };
 }
 
@@ -485,4 +485,44 @@ export async function cleanupTypingIndicators(): Promise<void> {
   } catch (e) {
     console.error('Error cleaning up typing indicators:', e);
   }
+}
+
+/**
+ * 12. updateUserProfile(userId: string, fields: ...)
+ */
+export async function updateUserProfile(
+  userId: string,
+  fields: { display_name: string; avatar_initials: string; avatar_url: string | null }
+): Promise<boolean> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('profiles')
+    .update(fields)
+    .eq('id', userId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+  return true;
+}
+
+/**
+ * 13. createUserProfile(profileData: ...)
+ */
+export async function createUserProfile(profileData: {
+  id: string;
+  display_name: string;
+  avatar_url: string | null;
+  avatar_initials: string;
+  avatar_color: string;
+}): Promise<boolean> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('profiles')
+    .insert(profileData);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+  return true;
 }

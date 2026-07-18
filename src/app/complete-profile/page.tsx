@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { getAvatarColor } from '@/lib/utils';
 import { Avatar } from '@/components/ui/Avatar';
+import { createUserProfile } from '@/lib/messaging';
 
 function CompleteProfileForm() {
   const router = useRouter();
@@ -58,17 +59,16 @@ function CompleteProfileForm() {
     const initials = trimmed.substring(0, 2).toUpperCase();
     const color = getAvatarColor(trimmed);
 
-    const supabase = createClient();
-    const { error: insertError } = await supabase.from('profiles').insert({
-      id: userId,
-      display_name: trimmed,
-      avatar_url: googleAvatarUrl,
-      avatar_initials: initials,
-      avatar_color: color,
-    });
-
-    if (insertError) {
-      setError(insertError.message || 'Failed to save profile.');
+    try {
+      await createUserProfile({
+        id: userId,
+        display_name: trimmed,
+        avatar_url: googleAvatarUrl,
+        avatar_initials: initials,
+        avatar_color: color,
+      });
+    } catch (err: any) {
+      setError(err.message || 'Failed to save profile.');
       setSubmitting(false);
       return;
     }

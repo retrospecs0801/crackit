@@ -6,6 +6,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { createClient } from '@/lib/supabase/client';
 import { uploadAvatar } from '@/lib/supabase/storage';
 import { Upload, X, Check, Loader2 } from 'lucide-react';
+import { updateUserProfile } from '@/lib/messaging';
 
 interface ProfileEditFormProps {
   profile: Profile;
@@ -93,14 +94,7 @@ export function ProfileEditForm({
         avatar_url: newAvatarUrl,
       };
 
-      const { error: dbError } = await supabase
-        .from('profiles')
-        .update(updatedFields)
-        .eq('id', profile.id);
-
-      if (dbError) {
-        throw new Error(dbError.message);
-      }
+      await updateUserProfile(profile.id, updatedFields);
 
       const updatedProfile: Profile = {
         ...profile,
