@@ -318,7 +318,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
       <div className="h-screen w-full flex flex-col items-center justify-center bg-canvas">
         <h1 className="font-serif text-[24px] text-ink mb-4">Room not found</h1>
         <Link href="/" className="font-mono text-[14px] text-ink hover:text-ink-muted underline underline-offset-4">
-          ← Back to StudyHall
+          ← Back to CrackIt
         </Link>
       </div>
     );
@@ -563,7 +563,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
                     href="/"
                     className="px-4 py-2 rounded-lg border border-border-default text-text-primary font-sans text-xs font-semibold hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
                   >
-                    ← Back to StudyHall
+                    ← Back to CrackIt
                   </Link>
                 </div>
               </div>

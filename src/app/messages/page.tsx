@@ -114,7 +114,7 @@ export default function MessagesPage() {
                 </div>
                 <div className="flex flex-col gap-1.5 max-w-sm">
                   <h2 className="font-serif font-bold text-xl text-text-primary">
-                    Your StudyHall Inbox
+                    Your CrackIt Inbox
                   </h2>
                   <p className="font-sans text-xs text-text-secondary leading-relaxed">
                     Select a friend on the left or click <span className="font-semibold text-text-primary">&quot;New&quot;</span> to start messaging. Direct messaging is strictly limited to accepted friends for your safety and privacy.

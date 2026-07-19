@@ -130,7 +130,7 @@ export function Navbar({ onCreateRoom }: { onCreateRoom: () => void }) {
       <nav className="fixed top-0 left-0 right-0 h-[56px] flex items-center justify-between px-6 z-50 border-b" style={{ backgroundColor: 'var(--nav-bg)', borderColor: 'var(--card-border)', backdropFilter: 'blur(12px)' }}>
         <Link href="/" className="flex items-center gap-2 font-sans text-[20px] font-semibold text-text-primary hover:opacity-80 transition-opacity">
           <div className="w-[8px] h-[8px] rounded-full bg-accent-green"></div>
-          StudyHall
+          crackIt
         </Link>
 
         <div className="flex items-center gap-4">

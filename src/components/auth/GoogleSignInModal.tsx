@@ -14,7 +14,7 @@ export function GoogleSignInModal({
   isOpen,
   onClose,
   redirectTo = '/',
-  message = 'Sign in with Google to continue to StudyHall.',
+  message = 'Sign in with Google to continue to CrackIt.',
 }: GoogleSignInModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,8 +26,17 @@ export function GoogleSignInModal({
     setError(null);
     try {
       const supabase = createClient();
-      const origin = typeof window !== 'undefined' ? window.location.origin : '';
-      const callbackUrl = `${origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`;
+      const getURL = () => {
+        let url =
+          process?.env?.NEXT_PUBLIC_SITE_URL ??
+          process?.env?.NEXT_PUBLIC_VERCEL_URL ??
+          (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+        url = url.includes('http') ? url : `https://${url}`;
+        url = url.charAt(url.length - 1) === '/' ? url : `${url}/`;
+        return url;
+      };
+
+      const callbackUrl = `${getURL()}auth/callback`;
 
       const { error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'google',

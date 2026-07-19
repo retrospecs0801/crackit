@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Navbar } from '@/components/layout/Navbar';
+import { SocialIconsRow } from '@/components/layout/SocialIcons';
 import { HeroBanner } from '@/components/landing/HeroBanner';
 import { ExamFilterBar } from '@/components/landing/ExamFilterBar';
 import { RoomGrid } from '@/components/landing/RoomGrid';
@@ -145,6 +147,18 @@ export default function Home() {
           onCreateRoom={() => setIsModalOpen(true)}
         />
       </main>
+
+      {/* Minimalist Bottom-Right About & Socials */}
+      <div className="fixed bottom-5 right-6 z-40 flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-border-default bg-canvas/80 backdrop-blur-md shadow-md hover:shadow-lg transition-all">
+        <Link
+          href="/about"
+          className="font-sans text-[13px] font-medium text-text-secondary hover:text-text-primary transition-colors px-1.5"
+        >
+          About Us
+        </Link>
+        <div className="w-[1px] h-3.5 bg-border-default mx-0.5" />
+        <SocialIconsRow />
+      </div>
 
       <CreateRoomModal
         isOpen={isModalOpen}
