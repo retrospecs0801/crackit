@@ -8,6 +8,8 @@ export type PomodoroEvent = {
   timeLeft: number;
   phase: Phase;
   duration: number;
+  focusDuration?: number;
+  breakDuration?: number;
 };
 
 export type PomodoroConfig = {

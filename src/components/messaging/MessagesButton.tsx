@@ -9,9 +9,10 @@ import { getConversations, updatePresence } from '@/lib/messaging';
 
 interface MessagesButtonProps {
   userId?: string | null;
+  openInNewTab?: boolean;
 }
 
-export function MessagesButton({ userId }: MessagesButtonProps) {
+export function MessagesButton({ userId, openInNewTab }: MessagesButtonProps) {
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const pathname = usePathname();
 
@@ -95,6 +96,8 @@ export function MessagesButton({ userId }: MessagesButtonProps) {
   return (
     <Link
       href="/messages"
+      target={openInNewTab ? "_blank" : undefined}
+      rel={openInNewTab ? "noopener noreferrer" : undefined}
       className={`relative p-2 rounded-full transition-all duration-200 ${
         isActive
           ? 'bg-accent-green/15 text-accent-green dark:bg-accent-green/25'

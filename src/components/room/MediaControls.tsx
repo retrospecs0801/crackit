@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useTrackToggle } from '@livekit/components-react'
 import { Track } from 'livekit-client'
 import { useRouter } from 'next/navigation'
-import { LogOut, Mic, MicOff, Video, VideoOff } from 'lucide-react'
+import { Share, Check, Mic, MicOff, Video, VideoOff } from 'lucide-react'
 
 interface MediaControlsProps {
   micDisabled?: boolean;
@@ -18,6 +18,23 @@ export default function MediaControls({
   const router = useRouter()
   const { buttonProps: micProps, enabled: micEnabled } = useTrackToggle({ source: Track.Source.Microphone })
   const { buttonProps: camProps, enabled: camEnabled } = useTrackToggle({ source: Track.Source.Camera })
+
+  const [copied, setCopied] = useState(false)
+
+  const handleInvite = () => {
+    if (typeof window !== 'undefined') {
+      const url = window.location.href
+      const textToCopy = `join me on crackit to study together: ${url}`
+      navigator.clipboard.writeText(textToCopy)
+        .then(() => {
+          setCopied(true)
+          setTimeout(() => setCopied(false), 2000)
+        })
+        .catch((err) => {
+          console.error('Failed to copy text: ', err)
+        })
+    }
+  }
 
   // Auto-mute if host locks microphone
   useEffect(() => {
@@ -76,11 +93,11 @@ export default function MediaControls({
       </button>
 
       <button
-        onClick={() => router.push('/')}
-        className="bg-transparent border border-border-default rounded-[8px] flex items-center gap-2 px-3 h-10 font-sans font-semibold text-[12px] text-text-secondary hover:bg-[#C1654A] hover:border-[#C1654A] hover:text-white transition-colors duration-150"
+        onClick={handleInvite}
+        className="bg-transparent border border-border-default rounded-[8px] flex items-center gap-2 px-3 h-10 font-sans font-semibold text-[12px] text-text-secondary hover:bg-accent-green hover:border-accent-green hover:text-white transition-colors duration-150 cursor-pointer"
       >
-        <LogOut size={14} />
-        Leave
+        {copied ? <Check size={14} /> : <Share size={14} />}
+        {copied ? 'Link copied!' : 'Invite'}
       </button>
     </div>
   )

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { MusicPlayer } from '../room/MusicPlayer';
 import { NotificationsBell } from './NotificationsBell';
+import { MessagesButton } from '@/components/messaging/MessagesButton';
 import { Moon, Sun } from 'lucide-react';
 
 export function RoomNavbar({
@@ -60,6 +61,7 @@ export function RoomNavbar({
           {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
         </button>
         {currentUserId && <NotificationsBell userId={currentUserId} />}
+        {currentUserId && <MessagesButton userId={currentUserId} openInNewTab={true} />}
         <button onClick={onToggleSidebar} className="md:hidden font-sans text-[13px] text-text-primary border border-border-default px-2 py-1 rounded">
           Chat / Timer
         </button>
