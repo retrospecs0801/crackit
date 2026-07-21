@@ -163,14 +163,14 @@ export default function RoomPage({ params }: { params: { id: string } }) {
     const currentMicLocked = isFocusMicLocked;
     const prevChatLocked = prevIsFocusChatLockedRef.current;
     const currentChatLocked = isFocusChatLocked;
-    
+
     const eventType = pomodoroState.lastEventType;
     const prevEventType = prevLastEventTypeRef.current;
 
     const lockedTypes: string[] = [];
     if (!prevMicLocked && currentMicLocked) lockedTypes.push('mic');
     if (!prevChatLocked && currentChatLocked) lockedTypes.push('chat');
-    
+
     const unlockedTypes: string[] = [];
     if (prevMicLocked && !currentMicLocked) unlockedTypes.push('Mic');
     if (prevChatLocked && !currentChatLocked) unlockedTypes.push('chat');
@@ -185,20 +185,20 @@ export default function RoomPage({ params }: { params: { id: string } }) {
     if (unlockedTypes.length > 0) {
       setSystemBubbles((prev) => [
         ...prev,
-        { id: `sys-${Date.now()}-unlock`, text: `🔓 ${unlockedTypes.join(' & ')} unlocked.`, timestamp: Date.now() }
+        { id: `sys-${Date.now()}-unlock`, text: ` ${unlockedTypes.join(' & ')} unlocked.`, timestamp: Date.now() }
       ]);
     }
-    
+
     if (prevMicLocked && !currentMicLocked) {
-       setForceUnmuteTrigger((c) => c + 1);
+      setForceUnmuteTrigger((c) => c + 1);
     }
 
     if (eventType === 'RESET' && eventType !== prevEventType && prevEventType !== undefined) {
       if (unlockedTypes.length === 0 && (currentMicLocked || currentChatLocked || prevMicLocked || prevChatLocked)) {
-         setSystemBubbles((prev) => [
-           ...prev,
-           { id: `sys-${Date.now()}-reset`, text: '🔓 Focus locks removed.', timestamp: Date.now() }
-         ]);
+        setSystemBubbles((prev) => [
+          ...prev,
+          { id: `sys-${Date.now()}-reset`, text: ' Focus locks removed.', timestamp: Date.now() }
+        ]);
       }
       setForceUnmuteTrigger((c) => c + 1);
     }

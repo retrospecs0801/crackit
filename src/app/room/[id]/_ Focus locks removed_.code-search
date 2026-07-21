@@ -1,0 +1,9 @@
+# Query: 🔓 Focus locks removed.
+# ContextLines: 1
+
+1 result - 1 file
+
+src\app\room\[id]\page.tsx:
+  199             ...prev,
+  200:            { id: `sys-${Date.now()}-reset`, text: ' Focus locks removed.', timestamp: Date.now() }
+  201           ]);

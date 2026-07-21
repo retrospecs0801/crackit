@@ -20,7 +20,7 @@ export const EXAM_OPTIONS = [
   { flag: '🇺🇸', name: 'NCLEX', id: 'NCLEX' },
   { flag: '🇧🇷', name: 'ENEM', id: 'ENEM' },
   { flag: '🌍', name: 'OTHER', id: 'OTHER' },
-  { flag: '✨', name: 'Custom', id: 'custom' },
+  { flag: ' ', name: 'Custom', id: 'custom' },
 ] as const;
 
 export type ExamTag =
