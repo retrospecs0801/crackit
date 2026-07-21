@@ -119,9 +119,10 @@ export function ConversationList({
       setIsModalOpen(false);
       await fetchConvs();
       onSelectConversation(conversation.id, otherUser);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error starting conversation:', err);
-      setActionError(err.message || 'Failed to start conversation');
+      const msg = err instanceof Error ? err.message : 'Failed to start conversation';
+      setActionError(msg);
     }
   };
 

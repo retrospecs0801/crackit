@@ -6,6 +6,7 @@ import {
   RoomAudioRenderer,
   useMaybeTrackRefContext,
   useMaybeParticipantContext,
+  VideoTrack,
 } from '@livekit/components-react';
 import { Track } from 'livekit-client';
 import { ParticipantMenu } from '@/components/room/ParticipantMenu';
@@ -57,8 +58,15 @@ function InteractiveParticipantTile({
     }
   } catch { }
 
-  const isCameraOff = !participant.isCameraEnabled;
+  const isScreenShareTile = trackRef?.source === Track.Source.ScreenShare;
+  // If this is a normal camera tile and camera is off, show the profile card.
+  // If this is a screen share tile, DO NOT show the profile card even if camera is off, because screen share is visible.
+  const isCameraOff = !participant.isCameraEnabled && !isScreenShareTile;
   const isTileOwner = identity === ownerId || (parsedUserId !== null && parsedUserId === ownerId);
+
+  // Check if camera track exists for PiP when showing screen share
+  const cameraPub = participant.getTrackPublication(Track.Source.Camera);
+  const showPiPCamera = isScreenShareTile && participant.isCameraEnabled && cameraPub && cameraPub.track;
 
   return (
     <div
@@ -72,15 +80,41 @@ function InteractiveParticipantTile({
     >
       <ParticipantTile />
 
+      {/* Picture-in-Picture (PiP) Camera Feed when screen sharing */}
+      {showPiPCamera && cameraPub && (
+        <div 
+          className="absolute bottom-3 right-3 z-30 w-48 aspect-video rounded-lg overflow-hidden border-2 border-surface shadow-2xl bg-black"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <VideoTrack 
+            trackRef={{ 
+              participant, 
+              source: Track.Source.Camera, 
+              publication: cameraPub 
+            }} 
+            className="w-full h-full object-cover" 
+          />
+          <div className="absolute bottom-1 left-1 bg-black/70 px-1.5 py-0.5 rounded text-[10px] text-white font-mono flex items-center gap-1 backdrop-blur-xs">
+            <span>{displayName} (Cam)</span>
+          </div>
+        </div>
+      )}
+
+      {/* Screen Share badge */}
+      {isScreenShareTile && (
+        <div className="absolute top-2.5 left-2.5 z-20 px-2.5 py-0.5 rounded-full bg-accent-green text-white font-sans font-semibold text-[10px] flex items-center gap-1 shadow-md">
+          <span>Screen Share • {displayName}</span>
+        </div>
+      )}
+
       {/* Room Owner badge for active video or tile header */}
-      {isTileOwner && (
+      {isTileOwner && !isScreenShareTile && (
         <div className="absolute top-2.5 right-2.5 z-20 px-2.5 py-0.5 rounded-full bg-[#F59E0B] text-black font-sans font-bold text-[10px] flex items-center gap-1 shadow-lg tracking-wide">
-          <span> </span>
           <span>Room Owner</span>
         </div>
       )}
 
-      {/* If camera is off, display elegant profile picture card */}
+      {/* If camera is off on a normal camera tile, display elegant profile picture card */}
       {isCameraOff && (
         <div className="absolute inset-0 z-10 bg-surface border border-border-default rounded-xl flex flex-col items-center justify-center gap-3 p-4 select-none">
           <div className="relative">
@@ -101,7 +135,7 @@ function InteractiveParticipantTile({
               <span>{displayName}</span>
             </span>
             <span className="font-mono text-[10px] text-text-secondary">
-              {isTileOwner ? '  Room Owner • Camera Off' : 'Camera Off'}
+              {isTileOwner ? 'Room Owner • Camera Off' : 'Camera Off'}
             </span>
           </div>
         </div>
@@ -142,10 +176,25 @@ export default function VideoGrid({
     { onlySubscribed: false }
   );
 
+  // Group tracks by participant: if a participant has ScreenShare, show ONLY their ScreenShare track in the grid
+  // (their Camera track will be rendered as PiP inside the ScreenShare tile via InteractiveParticipantTile).
+  const screenShareIdentities = new Set(
+    tracks
+      .filter((t) => t.source === Track.Source.ScreenShare)
+      .map((t) => t.participant.identity)
+  );
+
+  const combinedTracks = tracks.filter((t) => {
+    if (t.source === Track.Source.Camera && screenShareIdentities.has(t.participant.identity)) {
+      return false; // Exclude separate camera tile when screen sharing
+    }
+    return true;
+  });
+
   return (
     <div style={{ height: '100%', width: '100%', position: 'relative' }}>
       <RoomAudioRenderer />
-      <GridLayout tracks={tracks} style={{ height: '100%' }}>
+      <GridLayout tracks={combinedTracks} style={{ height: '100%' }}>
         <InteractiveParticipantTile
           currentUserId={currentUserId}
           roomName={roomName}

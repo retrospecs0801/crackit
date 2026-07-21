@@ -1,0 +1,9 @@
+# Query: Connecting audio, video & study tools via LiveKit.
+# ContextLines: 1
+
+1 result - 1 file
+
+src\app\room\[id]\page.tsx:
+  55              <p className="font-sans text-xs text-text-secondary">
+  56:               Connecting audio, video & study tools v
+  57              </p>

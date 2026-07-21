@@ -81,8 +81,9 @@ function CompleteProfileForm() {
         avatar_initials: initials,
         avatar_color: color,
       });
-    } catch (err: any) {
-      setError(err.message || 'Failed to save profile.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to save profile.';
+      setError(msg);
       setSubmitting(false);
       return;
     }

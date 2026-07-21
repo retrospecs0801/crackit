@@ -1,0 +1,106 @@
+# Query: crackIT
+# ContextLines: 1
+
+23 results - 13 files
+
+package-lock.json:
+  1  {
+  2:   "name": "crackit",
+  3    "version": "0.1.0",
+
+  7      "": {
+  8:       "name": "crackit",
+  9        "version": "0.1.0",
+
+package.json:
+  1  {
+  2:   "name": "crackit",
+  3    "version": "0.1.0",
+
+src\app\layout.tsx:
+  21  export const metadata: Metadata = {
+  22:   title: "Crackit",
+  23:   description: "CrackIt - Real-time peer-to-peer digital study rooms and interactive focus tracking",
+  24  };
+
+src\app\about\page.tsx:
+  20          >
+  21:           ← Back to CrackIt
+  22          </Link>
+
+  24          <div className="w-12 h-12 rounded-2xl border border-border-default bg-surface shadow-sm flex items-center justify-center mb-6 overflow-hidden">
+  25:           <img src="/logo.jpg" alt="CrackIt Logo" className="w-full h-full object-cover" />
+  26          </div>
+
+  28          <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-medium text-text-primary tracking-tight leading-[1.2] mb-8">
+  29:           About CrackIt
+  30          </h1>
+
+  33            <p className="font-sans text-[16px] sm:text-[18px] text-text-primary leading-relaxed sm:leading-loose">
+  34:             <span className="font-semibold">Crackit.live</span> is built on a single premise: studying shouldn&apos;t be a lonely journey. We break isolation by providing real-time peer-to-peer digital environments, interactive focus tracking, and structured countdown sessions designed to help you cross the finish line confidently.
+  35            </p>
+
+src\app\complete-profile\page.tsx:
+  132          <p className="font-sans text-[13px] text-text-secondary mb-6">
+  133:           Welcome to CrackIt! How should other students see you in study rooms?
+  134          </p>
+
+  168            >
+  169:             {submitting ? 'Saving...' : 'Continue to CrackIt'}
+  170            </button>
+
+src\app\messages\page.tsx:
+  116                    <h2 className="font-serif font-bold text-xl text-text-primary">
+  117:                     Your CrackIt Inbox
+  118                    </h2>
+
+src\app\room\[id]\page.tsx:
+  178        try {
+  179:         const cached = sessionStorage.getItem(`crackit_room_${params.id}`);
+  180          if (cached) {
+
+  320          <Link href="/" className="font-mono text-[14px] text-ink hover:text-ink-muted underline underline-offset-4">
+  321:           ← Back to CrackIt
+  322          </Link>
+
+  565                    >
+  566:                     ← Back to CrackIt
+  567                    </Link>
+
+src\components\auth\GoogleSignInModal.tsx:
+  16    redirectTo = '/',
+  17:   message = 'Sign in with Google to continue to CrackIt.',
+  18  }: GoogleSignInModalProps) {
+
+src\components\landing\CreateRoomModal.tsx:
+  154        try {
+  155:         sessionStorage.setItem(`crackit_room_${room.id}`, JSON.stringify(room));
+  156        } catch {}
+
+src\components\layout\Navbar.tsx:
+  132            <div className="w-[8px] h-[8px] rounded-full bg-accent-green"></div>
+  133:           Crackit
+  134          </Link>
+
+src\components\layout\SocialIcons.tsx:
+   7      name: 'Twitter / X',
+   8:     url: 'https://x.com/crackit_live',
+   9      icon: (
+
+  16      name: 'Instagram',
+  17:     url: 'https://www.instagram.com/crackit_live/',
+  18      icon: (
+
+  27      name: 'LinkedIn',
+  28:     url: 'https://www.linkedin.com/in/crackit/',
+  29      icon: (
+
+src\components\profile\ProfileContainer.tsx:
+  85              <ArrowLeft size={14} />
+  86:             Back to CrackIt
+  87            </Link>
+
+src\components\room\MediaControls.tsx:
+  28        const url = window.location.href
+  29:       const textToCopy = `join me on crackit to study together: ${url}`
+  30        navigator.clipboard.writeText(textToCopy)

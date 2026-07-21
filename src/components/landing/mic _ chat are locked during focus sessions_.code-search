@@ -1,0 +1,36 @@
+# Query:  mic & chat are locked during focus sessions.
+# ContextLines: 1
+
+7 results - 4 files
+
+src\components\landing\implementation_plan.md:
+  56    - Track transitions of `isFocusLocked`:
+  57:     - When `isFocusLocked` becomes `true` (on engage): append `systemBubbles` entry ` Mic & chat are locked during focus sessions.`
+  58      - When `isFocusLocked` becomes `false` (break start or mid-session toggle OFF) or when `lastEventType === 'RESET'` (owner safety unlock): append `systemBubbles` entry ` Mic & chat unlocked.`
+
+  96     - **UI Hint & Welcome Bubble**: Verify `"Mic and chat are disabled during focus"` appears under the Pomodoro timer. Verify top chat welcome bubble includes `"• Mic & chat will be locked during focus sessions."`.
+  97:    - **Focus Engage (Lock)**: Join with a second participant (`user2`). Start Pomodoro timer (`25/5` Focus phase) as owner. Verify `user2`'s mic auto-mutes, `user2`'s mic button is disabled, chat input is greyed out (`"Chat is disabled during focus"`), and chat displays bubble ` Mic & chat are locked during focus sessions.`.
+  98     - **Mid-Session Toggle**: In owner's Room Settings, toggle `Lock mic & chat` to `OFF`. Verify `user2` immediately uninhibits, receives bubble ` Mic & chat unlocked.`, and can unmute/chat. Toggle back `ON`.
+
+C:\Users\srmkh\.gemini\antigravity-ide\brain\6c2c7284-b487-4858-8827-75c55b5b32f8\implementation_plan.md:
+  56    - Track transitions of `isFocusLocked`:
+  57:     - When `isFocusLocked` becomes `true` (on engage): append `systemBubbles` entry ` Mic & chat are locked during focus sessions.`
+  58      - When `isFocusLocked` becomes `false` (break start or mid-session toggle OFF) or when `lastEventType === 'RESET'` (owner safety unlock): append `systemBubbles` entry ` Mic & chat unlocked.`
+
+  96     - **UI Hint & Welcome Bubble**: Verify `"Mic and chat are disabled during focus"` appears under the Pomodoro timer. Verify top chat welcome bubble includes `"• Mic & chat will be locked during focus sessions."`.
+  97:    - **Focus Engage (Lock)**: Join with a second participant (`user2`). Start Pomodoro timer (`25/5` Focus phase) as owner. Verify `user2`'s mic auto-mutes, `user2`'s mic button is disabled, chat input is greyed out (`"Chat is disabled during focus"`), and chat displays bubble ` Mic & chat are locked during focus sessions.`.
+  98     - **Mid-Session Toggle**: In owner's Room Settings, toggle `Lock mic & chat` to `OFF`. Verify `user2` immediately uninhibits, receives bubble ` Mic & chat unlocked.`, and can unmute/chat. Toggle back `ON`.
+
+C:\Users\srmkh\.gemini\antigravity-ide\brain\6c2c7284-b487-4858-8827-75c55b5b32f8\task.md:
+  14  - [x] Update `src/components/room/ChatSidebar.tsx` to append new joiner rules note (`• Mic & chat will be locked during focus sessions`), render system bubbles (` systemBubbles`), and lock chat input (`isFocusLocked`) <!-- id: 9 -->
+  15: - [x] Update `src/app/room/[id]/page.tsx` to track Pomodoro state (`isRunning`, `phase`, `lastEventType`), compute `isFocusLocked`, manage dynamic chat system bubbles (` Mic & chat are locked during focus sessions.` / ` Mic & chat unlocked.`), and pass props down to `MediaControls` and `ChatSidebar` <!-- id: 10 -->
+  16  
+
+C:\Users\srmkh\.gemini\antigravity-ide\brain\6c2c7284-b487-4858-8827-75c55b5b32f8\walkthrough.md:
+  37    - `MediaControls.tsx`: Automatically triggers mute on focus block start (`isFocusLocked`) for participants (`!isOwner`) and disables the mic button client-side (`disabled={micDisabled || isFocusLocked}`). Automatically re-enables when focus timer ends, breaks start, or timer resets (`forceUnmuteTrigger`).
+  38:   - `ChatSidebar.tsx`: Appends room rules (`• Mic & chat will be locked during focus sessions.`) to new joiners' welcome banner, disables the chat input box with explanatory placeholder during focus blocks, and renders real-time chronological system bubbles (` Mic & chat are locked during focus sessions.` / ` Mic & chat unlocked.`) right inside the chat stream.
+  39  
+
+  62     - Have a participant join and observe the welcome message note: `• Mic & chat will be locked during focus sessions.`
+  63:    - Owner starts a focus session (`25/5` or custom `FOCUS`). Observe that participant mics are auto-muted, mic control buttons are disabled (`not just muted`), chat input is disabled, and ` Mic & chat are locked during focus sessions.` appears inside the chat timeline.
+  64     - Owner pauses/resets or transitions to `BREAK`. Observe that participant mics and chat inputs immediately unlock and ` Mic & chat unlocked.` appears in chat. Owner toggling the setting OFF mid-room in `RoomSettingsApp` also unlocks participants immediately.

@@ -20,6 +20,7 @@ export const EXAM_OPTIONS = [
   { flag: '🇺🇸', name: 'NCLEX', id: 'NCLEX' },
   { flag: '🇧🇷', name: 'ENEM', id: 'ENEM' },
   { flag: '🌍', name: 'OTHER', id: 'OTHER' },
+  { flag: '✨', name: 'Custom', id: 'custom' },
 ] as const;
 
 export type ExamTag =
@@ -44,10 +45,11 @@ export type ExamTag =
   | 'NCLEX'
   | 'ENEM'
   | 'OTHER'
-  | 'JEE'
   | 'NEET'
   | 'UPSC'
-  | 'CBSE';
+  | 'CBSE'
+  | 'custom'
+  | 'Custom';
 
 export type User = {
   id: string;
@@ -70,6 +72,10 @@ export type Room = {
   id: string;
   name: string;
   examTag: ExamTag;
+  customExamLabel?: string;
+  examType?: string;
+  maxParticipants?: number;
+  camMandatory?: boolean;
   topic?: string;
   description?: string;
   maxStudents: number;
@@ -84,6 +90,8 @@ export type Room = {
   micDisabled?: boolean;
   cameraDisabled?: boolean;
   chatDisabled?: boolean;
+  focusMicLockEnabled?: boolean;
+  focusChatLockEnabled?: boolean;
 };
 
 export type Message = {

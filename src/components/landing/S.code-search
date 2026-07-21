@@ -1,0 +1,24 @@
+# Query: S
+# ContextLines: 1
+
+4 results - 4 files
+
+src\components\landing\CreateRoomModal.tsx:
+  249                ))}
+  250:               <option value={20}>Unlimited</option>
+  251              </select>
+
+src\components\room\RoomSettingsApp.tsx:
+  127            ))}
+  128:           <option value={20}>Unlimited</option>
+  129          </select>
+
+C:\Users\srmkh\.gemini\antigravity-ide\brain\6c2c7284-b487-4858-8827-75c55b5b32f8\implementation_plan.md:
+  97  - Inside the Room Sidebar Settings panel (`RoomSettingsApp`), display and allow toggling `Require camera on (recommended)` (`camMandatory`).
+  98: - Also update `Max Students` dropdown/input to support `1` through `10` plus `20 (Unlimited)`.
+  99  - When saved, update LiveKit metadata (`/api/rooms/update`) and broadcast via data channel (`SETTINGS_UPDATED`) so `camMandatory` and `maxParticipants` update in real time across all connected clients and cards.
+
+C:\Users\srmkh\.gemini\antigravity-ide\brain\6c2c7284-b487-4858-8827-75c55b5b32f8\walkthrough.md:
+  19  ### 3. Max Participants & Require Camera On Flag ([RoomSettingsApp.tsx](file:///c:/Users/srmkh/Desktop/crackit/src/components/room/RoomSettingsApp.tsx) & API Endpoints)
+  20: - **Participant Limit Selection**: Added a `Max Participants` dropdown (`1` through `10`, plus `20 (Unlimited)`) in [CreateRoomModal.tsx](file:///c:/Users/srmkh/Desktop/crackit/src/components/landing/CreateRoomModal.tsx) and [RoomSettingsApp.tsx](file:///c:/Users/srmkh/Desktop/crackit/src/components/room/RoomSettingsApp.tsx).
+  21  - **Server & UI Enforcement**:

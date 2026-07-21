@@ -24,6 +24,7 @@ interface MessageThreadProps {
   initialLastSeenAt?: string;
   onBack?: () => void;
   onNewMessage?: () => void;
+  alwaysShowBack?: boolean;
 }
 
 export function MessageThread({
@@ -34,6 +35,7 @@ export function MessageThread({
   initialLastSeenAt,
   onBack,
   onNewMessage,
+  alwaysShowBack = false,
 }: MessageThreadProps) {
   const [messages, setMessages] = useState<DirectMessageWithSender[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -214,7 +216,7 @@ export function MessageThread({
           {onBack && (
             <button
               onClick={onBack}
-              className="p-2 -ml-1 rounded-full text-text-primary hover:bg-black/5 dark:hover:bg-white/10 md:hidden transition-colors"
+              className={`p-2 -ml-1 rounded-full text-text-primary hover:bg-black/5 dark:hover:bg-white/10 transition-colors ${alwaysShowBack ? '' : 'md:hidden'}`}
               aria-label="Back to conversations"
             >
               <ArrowLeft size={18} />
@@ -289,9 +291,8 @@ export function MessageThread({
           </div>
         ) : (
           <div className="flex flex-col gap-2 min-h-full justify-end">
-            {messages.map((m, idx) => {
+            {messages.map((m) => {
               const isMine = m.sender_id === currentUserId;
-              const showCheck = isMine && idx === messages.length - 1; // show status on latest message or all
 
               return (
                 <div

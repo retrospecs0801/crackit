@@ -10,9 +10,10 @@ import { getConversations, updatePresence } from '@/lib/messaging';
 interface MessagesButtonProps {
   userId?: string | null;
   openInNewTab?: boolean;
+  onClick?: () => void;
 }
 
-export function MessagesButton({ userId, openInNewTab }: MessagesButtonProps) {
+export function MessagesButton({ userId, openInNewTab, onClick }: MessagesButtonProps) {
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const pathname = usePathname();
 
@@ -93,25 +94,46 @@ export function MessagesButton({ userId, openInNewTab }: MessagesButtonProps) {
 
   const isActive = pathname === '/messages' || pathname.startsWith('/messages/');
 
-  return (
-    <Link
-      href="/messages"
-      target={openInNewTab ? "_blank" : undefined}
-      rel={openInNewTab ? "noopener noreferrer" : undefined}
-      className={`relative p-2 rounded-full transition-all duration-200 ${
-        isActive
-          ? 'bg-accent-green/15 text-accent-green dark:bg-accent-green/25'
-          : 'hover:bg-black/5 dark:hover:bg-white/10 text-text-primary'
-      }`}
-      aria-label="Direct Messages"
-      title="Direct Messages"
-    >
+  const className = `relative p-2 rounded-full transition-all duration-200 ${
+    isActive
+      ? 'bg-accent-green/15 text-accent-green dark:bg-accent-green/25'
+      : 'hover:bg-black/5 dark:hover:bg-white/10 text-text-primary'
+  }`;
+
+  const innerContent = (
+    <>
       <MessageSquare size={18} className="transition-transform group-hover:scale-105" />
       {unreadCount > 0 && (
         <span className="absolute top-1 right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-accent-terracotta text-white font-mono text-[10px] font-bold flex items-center justify-center border border-surface shadow-sm animate-pulse">
           {unreadCount > 99 ? '99+' : unreadCount}
         </span>
       )}
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button
+        onClick={onClick}
+        className={className}
+        aria-label="Direct Messages"
+        title="Direct Messages"
+      >
+        {innerContent}
+      </button>
+    );
+  }
+
+  return (
+    <Link
+      href="/messages"
+      target={openInNewTab ? "_blank" : undefined}
+      rel={openInNewTab ? "noopener noreferrer" : undefined}
+      className={className}
+      aria-label="Direct Messages"
+      title="Direct Messages"
+    >
+      {innerContent}
     </Link>
   );
 }

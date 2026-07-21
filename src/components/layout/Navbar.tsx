@@ -8,6 +8,7 @@ import { GoogleSignInModal } from '@/components/auth/GoogleSignInModal';
 import { Avatar } from '@/components/ui/Avatar';
 import { NotificationsBell } from '@/components/layout/NotificationsBell';
 import { MessagesButton } from '@/components/messaging/MessagesButton';
+import { MessagesPanel } from '@/components/messaging/MessagesPanel';
 
 export function Navbar({ onCreateRoom }: { onCreateRoom: () => void }) {
   const [currentUser, setCurrentUser] = useState<{
@@ -16,20 +17,21 @@ export function Navbar({ onCreateRoom }: { onCreateRoom: () => void }) {
     avatarInitials: string;
     avatarColor: string;
     avatarUrl?: string | null;
-  } | null>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = localStorage.getItem('studyhall_current_user');
-        if (cached) return JSON.parse(cached);
-      } catch { }
-    }
-    return null;
-  });
+  } | null>(null);
+  
+  const [isClient, setIsClient] = useState(false);
 
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [isMessagesOpen, setIsMessagesOpen] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
+    try {
+      const cached = localStorage.getItem('studyhall_current_user');
+      if (cached) setCurrentUser(JSON.parse(cached));
+    } catch { }
+
     const theme = localStorage.getItem('theme');
     if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
       setIsDarkMode(true);
@@ -143,10 +145,12 @@ export function Navbar({ onCreateRoom }: { onCreateRoom: () => void }) {
           </button>
 
           {/* Profile Section */}
-          {currentUser ? (
+          {!isClient ? (
+            <div className="w-[70px] h-[32px]"></div>
+          ) : currentUser ? (
             <div className="flex items-center gap-2">
               <NotificationsBell userId={currentUser.id} />
-              <MessagesButton userId={currentUser.id} />
+              <MessagesButton userId={currentUser.id} onClick={() => setIsMessagesOpen(true)} />
               <Link
                 href="/profile"
                 className="flex items-center h-[32px] rounded-full border border-border-default bg-canvas overflow-hidden pr-3 hover:opacity-80 transition-opacity"
@@ -195,6 +199,11 @@ export function Navbar({ onCreateRoom }: { onCreateRoom: () => void }) {
         onClose={() => setAuthModalOpen(false)}
         redirectTo="/"
         message="Sign in with Google to create or join study rooms."
+      />
+
+      <MessagesPanel 
+        isOpen={isMessagesOpen} 
+        onClose={() => setIsMessagesOpen(false)} 
       />
     </>
   );

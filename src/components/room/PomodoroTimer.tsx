@@ -8,11 +8,14 @@ import { Pencil, Check, X } from 'lucide-react';
 interface PomodoroTimerProps {
   isOwner: boolean;
   currentUserId: string;
+  focusMicLockEnabled?: boolean;
+  focusChatLockEnabled?: boolean;
+  onPomodoroStateChange?: (state: { isRunning: boolean; phase: 'FOCUS' | 'BREAK'; lastEventType?: string }) => void;
 }
 
 type Preset = '25/5' | '50/10' | 'custom';
 
-export function PomodoroTimer({ isOwner, currentUserId }: PomodoroTimerProps) {
+export function PomodoroTimer({ isOwner, focusMicLockEnabled, focusChatLockEnabled, onPomodoroStateChange }: PomodoroTimerProps) {
   const [activeTab, setActiveTab] = useState<'room' | 'personal'>('room');
 
   // --- ROOM TIMER STATE ---
@@ -118,6 +121,14 @@ export function PomodoroTimer({ isOwner, currentUserId }: PomodoroTimerProps) {
   const breakDurationRef = useRef(breakDuration);
 
   useEffect(() => { isRunningRef.current = isRunning; }, [isRunning]);
+
+  useEffect(() => {
+    onPomodoroStateChange?.({
+      isRunning,
+      phase,
+      lastEventType: externalEvent?.type,
+    });
+  }, [isRunning, phase, externalEvent, onPomodoroStateChange]);
   useEffect(() => { timeLeftRef.current = timeLeft; }, [timeLeft]);
   useEffect(() => { phaseRef.current = phase; }, [phase]);
   useEffect(() => { focusDurationRef.current = focusDuration; }, [focusDuration]);
@@ -425,6 +436,17 @@ export function PomodoroTimer({ isOwner, currentUserId }: PomodoroTimerProps) {
                 You control the timer
               </div>
             </>
+          )}
+
+          {/* Focus Lock Hint */}
+          {(focusMicLockEnabled !== false || focusChatLockEnabled !== false) && (
+            <div className="font-sans text-[11px] text-text-secondary mt-2 text-center">
+              {focusMicLockEnabled !== false && focusChatLockEnabled !== false
+                ? "Mic and chat are disabled during focus"
+                : focusMicLockEnabled !== false
+                ? "Mic is disabled during focus"
+                : "Chat is disabled during focus"}
+            </div>
           )}
         </div>
       ) : (

@@ -36,9 +36,9 @@ export async function GET() {
       console.error('[Room API Error] Failed to list LiveKit rooms:', lkError);
     }
 
-    const activeRoomsMap = new Map<string, number>();
+    const activeRoomsMap = new Map<string, { numParticipants: number; metadata?: string }>();
     for (const lkRoom of livekitRooms) {
-      activeRoomsMap.set(lkRoom.name, lkRoom.numParticipants);
+      activeRoomsMap.set(lkRoom.name, { numParticipants: lkRoom.numParticipants, metadata: lkRoom.metadata });
     }
 
     const activeRooms: Room[] = [];
@@ -46,7 +46,8 @@ export async function GET() {
     const staleIds: string[] = [];
 
     for (const dbRoom of (dbRooms || [])) {
-      const numParticipants = activeRoomsMap.get(dbRoom.id) || 0;
+      const lkData = activeRoomsMap.get(dbRoom.id);
+      const numParticipants = lkData?.numParticipants || 0;
       const createdTime = new Date(dbRoom.created_at || 0).getTime();
       const ageMs = now - createdTime;
 
@@ -59,7 +60,14 @@ export async function GET() {
         continue;
       }
 
-      let members: User[] = [];
+      let parsedMeta: Record<string, unknown> | undefined = undefined;
+      if (lkData?.metadata) {
+        try {
+          parsedMeta = JSON.parse(lkData.metadata);
+        } catch {}
+      }
+
+      const members: User[] = [];
       if (numParticipants > 0) {
         try {
           const participants = await svc.listParticipants(dbRoom.id);
@@ -98,9 +106,13 @@ export async function GET() {
         id: dbRoom.id,
         name: dbRoom.name,
         examTag: dbRoom.exam_tag as ExamTag,
+        customExamLabel: dbRoom.custom_exam_label ? String(dbRoom.custom_exam_label) : (parsedMeta?.customExamLabel ? String(parsedMeta.customExamLabel) : undefined),
+        examType: (dbRoom.exam_tag === 'custom' || dbRoom.exam_tag === 'Custom') ? 'custom' : undefined,
         topic: dbRoom.topic || '',
         description: dbRoom.description || '',
-        maxStudents: dbRoom.max_students || 6,
+        maxStudents: Number(dbRoom.max_students || 6),
+        maxParticipants: dbRoom.max_participants ? Number(dbRoom.max_participants) : (parsedMeta?.maxParticipants ? Number(parsedMeta.maxParticipants) : Number(dbRoom.max_students || 6)),
+        camMandatory: Boolean(dbRoom.cam_mandatory ?? parsedMeta?.camMandatory ?? false),
         currentStudents: numParticipants,
         members,
         owner_id: dbRoom.owner_id || '',
@@ -111,6 +123,8 @@ export async function GET() {
         micDisabled: dbRoom.mic_disabled,
         cameraDisabled: dbRoom.camera_disabled,
         chatDisabled: dbRoom.chat_disabled,
+        focusMicLockEnabled: Boolean(dbRoom.focus_mic_lock_enabled ?? parsedMeta?.focusMicLockEnabled ?? true),
+        focusChatLockEnabled: Boolean(dbRoom.focus_chat_lock_enabled ?? parsedMeta?.focusChatLockEnabled ?? true),
       };
 
       activeRooms.push(roomObj);

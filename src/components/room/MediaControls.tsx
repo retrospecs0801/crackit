@@ -1,23 +1,27 @@
 'use client';
 
-import { useEffect, useState } from 'react'
-import { useTrackToggle } from '@livekit/components-react'
+import { useEffect, useState, useRef } from 'react'
+import { useTrackToggle, useLocalParticipant } from '@livekit/components-react'
 import { Track } from 'livekit-client'
-import { useRouter } from 'next/navigation'
-import { Share, Check, Mic, MicOff, Video, VideoOff } from 'lucide-react'
+import { Share, Check, Mic, MicOff, Video, VideoOff, Monitor } from 'lucide-react'
 
 interface MediaControlsProps {
   micDisabled?: boolean;
   cameraDisabled?: boolean;
+  isFocusMicLocked?: boolean;
+  forceUnmuteTrigger?: number;
 }
 
 export default function MediaControls({
   micDisabled = false,
   cameraDisabled = false,
+  isFocusMicLocked = false,
+  forceUnmuteTrigger,
 }: MediaControlsProps) {
-  const router = useRouter()
   const { buttonProps: micProps, enabled: micEnabled } = useTrackToggle({ source: Track.Source.Microphone })
   const { buttonProps: camProps, enabled: camEnabled } = useTrackToggle({ source: Track.Source.Camera })
+  const { buttonProps: screenProps, enabled: screenEnabled } = useTrackToggle({ source: Track.Source.ScreenShare })
+  const { localParticipant } = useLocalParticipant()
 
   const [copied, setCopied] = useState(false)
 
@@ -36,13 +40,49 @@ export default function MediaControls({
     }
   }
 
-  // Auto-mute if host locks microphone
+  // Handle native browser "Stop sharing" trigger by listening for track.ended event
   useEffect(() => {
-    if (micDisabled && micEnabled && micProps.onClick) {
+    if (!localParticipant) return;
+    const screenPub = localParticipant.getTrackPublication(Track.Source.ScreenShare);
+    const track = screenPub?.track?.mediaStreamTrack;
+    if (track) {
+      const handleEnded = () => {
+        if (screenPub && screenPub.track) {
+          try {
+            localParticipant.unpublishTrack(screenPub.track);
+          } catch (e) {
+            console.warn('Error cleanly stopping display media track:', e);
+          }
+        }
+      };
+      track.addEventListener('ended', handleEnded);
+      return () => track.removeEventListener('ended', handleEnded);
+    }
+  }, [localParticipant, screenEnabled]);
+
+  // Auto-mute if host locks microphone or focus lock engages
+  useEffect(() => {
+    if ((micDisabled || isFocusMicLocked) && micEnabled && micProps.onClick) {
       const mockEvent = { preventDefault: () => {} } as React.MouseEvent<HTMLButtonElement>;
       micProps.onClick(mockEvent);
     }
-  }, [micDisabled, micEnabled, micProps]);
+  }, [micDisabled, isFocusMicLocked, micEnabled, micProps]);
+
+  const prevIsFocusLockedRef = useRef(isFocusMicLocked);
+  const prevForceUnmuteTriggerRef = useRef(forceUnmuteTrigger);
+
+  // Auto-unmute when focus lock disengages or reset is triggered
+  useEffect(() => {
+    const focusUnlocked = prevIsFocusLockedRef.current === true && !isFocusMicLocked;
+    const resetTriggered = forceUnmuteTrigger !== undefined && forceUnmuteTrigger !== prevForceUnmuteTriggerRef.current && prevForceUnmuteTriggerRef.current !== undefined;
+    prevIsFocusLockedRef.current = isFocusMicLocked;
+    prevForceUnmuteTriggerRef.current = forceUnmuteTrigger;
+
+    if ((focusUnlocked || resetTriggered) && !micDisabled && !micEnabled && micProps.onClick) {
+      const mockEvent = { preventDefault: () => {} } as React.MouseEvent<HTMLButtonElement>;
+      micProps.onClick(mockEvent);
+    }
+  }, [isFocusMicLocked, forceUnmuteTrigger, micDisabled, micEnabled, micProps]);
 
   // Auto-disable video if host locks camera
   useEffect(() => {
@@ -62,15 +102,15 @@ export default function MediaControls({
     >
       <button
         {...micProps}
-        disabled={micDisabled}
-        title={micDisabled ? "Microphone is disabled by host" : "Toggle Mic"}
+        disabled={micDisabled || isFocusMicLocked}
+        title={micDisabled || isFocusMicLocked ? "Microphone is locked during focus sessions" : "Toggle Mic"}
         className={`w-10 h-10 border-none rounded-[8px] flex items-center justify-center transition-colors duration-150 text-white disabled:opacity-40 disabled:cursor-not-allowed ${
-          micEnabled && !micDisabled
+          micEnabled && !micDisabled && !isFocusMicLocked
             ? 'bg-black/20 dark:bg-white/10 hover:bg-black/30 dark:hover:bg-white/20 text-text-primary' 
             : 'bg-[#C1654A] hover:bg-[#B5563E] text-white'
         }`}
       >
-        {micEnabled && !micDisabled
+        {micEnabled && !micDisabled && !isFocusMicLocked
           ? <Mic size={18} className="text-text-primary" />
           : <MicOff size={18} className="text-white" />
         }
@@ -90,6 +130,18 @@ export default function MediaControls({
           ? <Video size={18} className="text-text-primary" />
           : <VideoOff size={18} className="text-white" />
         }
+      </button>
+
+      <button
+        {...screenProps}
+        title={screenEnabled ? "Stop Screen Share" : "Share Screen"}
+        className={`w-10 h-10 border-none rounded-[8px] flex items-center justify-center transition-colors duration-150 text-white ${
+          screenEnabled
+            ? 'bg-accent-green hover:bg-accent-green/90 text-white shadow-[0_0_12px_rgba(92,122,90,0.5)]' 
+            : 'bg-black/20 dark:bg-white/10 hover:bg-black/30 dark:hover:bg-white/20 text-text-primary'
+        }`}
+      >
+        <Monitor size={18} className={screenEnabled ? "text-white" : "text-text-primary"} />
       </button>
 
       <button

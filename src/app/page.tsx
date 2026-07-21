@@ -31,9 +31,13 @@ export default function Home() {
         id: String(r.id || ''),
         name: String(r.name || ''),
         examTag: (r.exam_tag as ExamTag) || 'OTHER',
+        customExamLabel: r.custom_exam_label ? String(r.custom_exam_label) : (r.metadata && typeof r.metadata === 'string' ? JSON.parse(r.metadata).customExamLabel : undefined),
+        examType: r.exam_tag === 'custom' || r.exam_tag === 'Custom' ? 'custom' : undefined,
+        maxStudents: Number(r.max_students || 6),
+        maxParticipants: r.max_participants ? Number(r.max_participants) : Number(r.max_students || 6),
+        camMandatory: Boolean(r.cam_mandatory || false),
         topic: String(r.topic || ''),
         description: String(r.description || ''),
-        maxStudents: Number(r.max_students || 6),
         currentStudents: 0,
         members: [],
         owner_id: String(r.owner_id || ''),
@@ -67,6 +71,7 @@ export default function Home() {
         if (existing) {
           roomMap.set(r.id, {
             ...existing,
+            ...r,
             currentStudents: r.currentStudents !== undefined ? r.currentStudents : existing.currentStudents,
             members: r.members && r.members.length > 0 ? r.members : existing.members || [],
           });
@@ -97,39 +102,52 @@ export default function Home() {
   const activeTabs: FilterType[] = (() => {
     const counts: Record<string, number> = {};
     for (const r of allRooms) {
-      if (r.examTag) {
-        counts[r.examTag] = (counts[r.examTag] || 0) + 1;
+      let tag = r.examTag;
+      if (tag === ('JEE' as unknown)) tag = 'JEE Main/Advanced';
+      if (tag === 'custom' || tag === 'Custom' || r.examType === 'custom') {
+        counts['Custom'] = (counts['Custom'] || 0) + 1;
+      } else if (tag && tag !== ('JEE' as unknown)) {
+        counts[tag] = (counts[tag] || 0) + 1;
       }
     }
 
     // Sort unique active tags descending by room count
-    const sortedActive = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+    const sortedActive = Object.keys(counts)
+      .filter((k) => k !== 'JEE')
+      .sort((a, b) => counts[b] - counts[a]);
 
     const result = [...sortedActive];
 
-    const defaultPriority: ExamTag[] = [
+    const defaultPriority: (ExamTag | 'Custom')[] = [
       'JEE Main/Advanced',
       'NEET-UG',
       'UPSC CSE',
       'MCAT',
       'LSAT',
-      'OTHER'
+      'OTHER',
+      'Custom'
     ];
 
     for (const priority of defaultPriority) {
-      if (result.length >= 5) break;
-      if (!result.includes(priority)) {
-        result.push(priority);
+      if (result.length >= 6) break;
+      if (!result.includes(priority) && priority !== ('JEE' as unknown)) {
+        result.push(priority as FilterType);
       }
     }
 
-    return ['ALL', ...result] as FilterType[];
+    if (!result.includes('Custom')) {
+      result.push('Custom');
+    }
+
+    return ['ALL', ...result.filter((k) => k !== 'JEE')] as FilterType[];
   })();
 
   const filteredRooms =
     activeFilter === 'ALL'
       ? allRooms
-      : allRooms.filter((r) => r.examTag === activeFilter);
+      : activeFilter === 'Custom' || activeFilter === 'custom'
+      ? allRooms.filter((r) => r.examTag === 'custom' || r.examTag === 'Custom' || r.examType === 'custom')
+      : allRooms.filter((r) => r.examTag === activeFilter || (activeFilter === 'JEE Main/Advanced' && r.examTag === ('JEE' as unknown)));
 
   return (
     <div className="min-h-screen flex flex-col pt-[56px]">

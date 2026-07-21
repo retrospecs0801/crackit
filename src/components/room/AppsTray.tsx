@@ -26,7 +26,6 @@ interface Todo {
 export function AppsTray({
   roomId,
   currentUserId,
-  currentUserIdStr = '',
   isOwner = false,
   roomData,
   onUpdateRoom,
@@ -51,14 +50,14 @@ export function AppsTray({
       if (stored) {
         setTodos(JSON.parse(stored));
       }
-    } catch (e) {}
+    } catch {}
   }, [roomId]);
 
   // Save Todos on change
   useEffect(() => {
     try {
       localStorage.setItem(`studyhall_todos_${roomId}`, JSON.stringify(todos));
-    } catch (e) {}
+    } catch {}
   }, [todos, roomId]);
 
   const handleAddTodo = (e?: React.FormEvent) => {
@@ -87,7 +86,7 @@ export function AppsTray({
       try {
         const event = { type: 'PLAYING', title: id, userId: currentUserId };
         send(new TextEncoder().encode(JSON.stringify(event)), { reliable: true });
-      } catch (e) {}
+      } catch {}
     } else {
       setVideoId(null);
       setYoutubeError(true);

@@ -46,11 +46,15 @@ export async function POST(req: NextRequest) {
       owner_id: user.id,
       ownerId: user.id,
       maxStudents: roomDetails.maxStudents || 6,
+      maxParticipants: roomDetails.maxParticipants ?? roomDetails.maxStudents ?? 6,
+      camMandatory: roomDetails.camMandatory || false,
       welcomeMessageEnabled: roomDetails.welcomeMessageEnabled || false,
       welcomeMessageText: roomDetails.welcomeMessageText || null || undefined,
       micDisabled: roomDetails.micDisabled || false,
       cameraDisabled: roomDetails.cameraDisabled || false,
       chatDisabled: roomDetails.chatDisabled || false,
+      focusMicLockEnabled: roomDetails.focusMicLockEnabled ?? true,
+      focusChatLockEnabled: roomDetails.focusChatLockEnabled ?? true,
     };
 
     // 1. Update Supabase rooms table row
@@ -59,11 +63,15 @@ export async function POST(req: NextRequest) {
       .update({
         name: fullRoomDetails.name,
         max_students: fullRoomDetails.maxStudents,
+        max_participants: fullRoomDetails.maxParticipants,
         welcome_message_enabled: fullRoomDetails.welcomeMessageEnabled,
         welcome_message_text: fullRoomDetails.welcomeMessageText || null,
         mic_disabled: fullRoomDetails.micDisabled,
         camera_disabled: fullRoomDetails.cameraDisabled,
         chat_disabled: fullRoomDetails.chatDisabled,
+        cam_mandatory: fullRoomDetails.camMandatory,
+        focus_mic_lock_enabled: fullRoomDetails.focusMicLockEnabled,
+        focus_chat_lock_enabled: fullRoomDetails.focusChatLockEnabled,
       })
       .eq('id', fullRoomDetails.id);
 
@@ -78,6 +86,9 @@ export async function POST(req: NextRequest) {
 
     try {
       await svc.updateRoomMetadata(fullRoomDetails.id, JSON.stringify(fullRoomDetails));
+      try {
+        await (svc as unknown as { updateRoom: (room: string, opts: { maxParticipants?: number }) => Promise<void> }).updateRoom(fullRoomDetails.id, { maxParticipants: fullRoomDetails.maxParticipants });
+      } catch {}
     } catch (lkErr) {
       console.warn('LiveKit metadata update failed (room may be currently inactive):', lkErr);
     }

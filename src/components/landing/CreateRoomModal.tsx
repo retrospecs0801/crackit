@@ -15,9 +15,14 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   
   const [examType, setExamType] = useState<ExamTag>('JEE Main/Advanced');
+  const [customExamLabel, setCustomExamLabel] = useState('');
+  const [maxParticipants, setMaxParticipants] = useState<number>(6);
+  const [camMandatory, setCamMandatory] = useState(false);
   const [roomName, setRoomName] = useState('');
   const [welcomeMessageEnabled, setWelcomeMessageEnabled] = useState(false);
   const [welcomeMessageText, setWelcomeMessageText] = useState('');
+  const [focusMicLockEnabled, setFocusMicLockEnabled] = useState(true);
+  const [focusChatLockEnabled, setFocusChatLockEnabled] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -64,6 +69,21 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
       hasError = true;
     }
 
+    const isCustom = examType === 'custom' || examType === 'Custom';
+    const customExamInput = form.querySelector('input[placeholder="e.g. Advanced Quantum Physics"]') as HTMLInputElement;
+    if (isCustom && !customExamLabel.trim() && customExamInput) {
+      customExamInput.style.border = '1px solid #BC6C4F';
+      const errorMsg = document.createElement('div');
+      errorMsg.className = 'custom-error-msg';
+      errorMsg.style.color = '#BC6C4F';
+      errorMsg.style.fontFamily = '"JetBrains Mono", monospace';
+      errorMsg.style.fontSize = '11px';
+      errorMsg.style.marginTop = '4px';
+      errorMsg.innerText = 'Custom exam name cannot be empty';
+      customExamInput.parentElement?.appendChild(errorMsg);
+      hasError = true;
+    }
+
     if (hasError) return;
 
     setSubmitting(true);
@@ -84,8 +104,12 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
     const room: Room = {
       id,
       name: roomName.trim(),
-      examTag: examType,
-      maxStudents: 6,
+      examTag: isCustom ? 'custom' : examType,
+      customExamLabel: isCustom ? customExamLabel.trim() : undefined,
+      examType: isCustom ? 'custom' : examType,
+      maxStudents: maxParticipants,
+      maxParticipants: maxParticipants,
+      camMandatory: camMandatory,
       currentStudents: 1,
       members: [],
       owner_id: user.id,
@@ -96,6 +120,8 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
       micDisabled: false,
       cameraDisabled: false,
       chatDisabled: false,
+      focusMicLockEnabled,
+      focusChatLockEnabled,
     };
     
     try {
@@ -104,7 +130,9 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
         id: room.id,
         name: room.name,
         exam_tag: room.examTag,
+        custom_exam_label: room.customExamLabel || null,
         max_students: room.maxStudents,
+        max_participants: room.maxParticipants,
         owner_id: user.id,
         created_at: room.createdAt,
         welcome_message_enabled: room.welcomeMessageEnabled || false,
@@ -112,6 +140,9 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
         mic_disabled: false,
         camera_disabled: false,
         chat_disabled: false,
+        cam_mandatory: room.camMandatory || false,
+        focus_mic_lock_enabled: room.focusMicLockEnabled ?? true,
+        focus_chat_lock_enabled: room.focusChatLockEnabled ?? true,
       });
 
       if (supabaseError) {
@@ -186,6 +217,21 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
             </select>
           </div>
 
+          {(examType === 'custom' || examType === 'Custom') && (
+            <div className="animate-in fade-in duration-200">
+              <label className={labelStyles}>Custom Exam Name (Max 24 chars)</label>
+              <input 
+                type="text" 
+                value={customExamLabel}
+                onChange={(e) => setCustomExamLabel(e.target.value)}
+                maxLength={24}
+                placeholder="e.g. Advanced Quantum Physics"
+                className={inputStyles}
+                required
+              />
+            </div>
+          )}
+
           <div>
             <label className={labelStyles}>Room Name</label>
             <input 
@@ -196,6 +242,22 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
               className={inputStyles}
               required
             />
+          </div>
+
+          <div>
+            <label className={labelStyles}>Max Participants</label>
+            <select 
+              value={maxParticipants}
+              onChange={(e) => setMaxParticipants(Number(e.target.value))}
+              className={inputStyles}
+            >
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                <option key={num} value={num}>
+                  {num} {num === 1 ? 'Participant' : 'Participants'}
+                </option>
+              ))}
+              <option value={20}>20 (Unlimited)</option>
+            </select>
           </div>
 
           {/* Welcome Message Toggle & Textarea */}
@@ -235,6 +297,84 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
                 />
               </div>
             )}
+          </div>
+
+          {/* Require camera on (recommended) Toggle */}
+          <div className="border border-border-default rounded-lg p-3.5 bg-surface transition-all">
+            <div className="flex items-center justify-between cursor-pointer" onClick={() => setCamMandatory(!camMandatory)}>
+              <div className="flex flex-col">
+                <span className="font-sans font-semibold text-[13px] text-text-primary">Require camera on (recommended)</span>
+                <span className="font-sans text-[11px] text-text-secondary">Show camera required signal before joining</span>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCamMandatory(!camMandatory);
+                }}
+                className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-200 focus:outline-none ${
+                  camMandatory ? 'bg-accent-green' : 'bg-border-default'
+                }`}
+              >
+                <div
+                  className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
+                    camMandatory ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* Lock mic during focus sessions Toggle */}
+          <div className="border border-border-default rounded-lg p-3.5 bg-surface transition-all">
+            <div className="flex items-center justify-between cursor-pointer" onClick={() => setFocusMicLockEnabled(!focusMicLockEnabled)}>
+              <div className="flex flex-col">
+                <span className="font-sans font-semibold text-[13px] text-text-primary">Lock mic during focus sessions</span>
+                <span className="font-sans text-[11px] text-text-secondary">Automatically mute mics while focus blocks run</span>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFocusMicLockEnabled(!focusMicLockEnabled);
+                }}
+                className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-200 focus:outline-none ${
+                  focusMicLockEnabled ? 'bg-accent-green' : 'bg-border-default'
+                }`}
+              >
+                <div
+                  className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
+                    focusMicLockEnabled ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* Lock chat during focus sessions Toggle */}
+          <div className="border border-border-default rounded-lg p-3.5 bg-surface transition-all">
+            <div className="flex items-center justify-between cursor-pointer" onClick={() => setFocusChatLockEnabled(!focusChatLockEnabled)}>
+              <div className="flex flex-col">
+                <span className="font-sans font-semibold text-[13px] text-text-primary">Lock chat during focus sessions</span>
+                <span className="font-sans text-[11px] text-text-secondary">Automatically lock chat while focus blocks run</span>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFocusChatLockEnabled(!focusChatLockEnabled);
+                }}
+                className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-200 focus:outline-none ${
+                  focusChatLockEnabled ? 'bg-accent-green' : 'bg-border-default'
+                }`}
+              >
+                <div
+                  className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
+                    focusChatLockEnabled ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
           </div>
 
           <button 

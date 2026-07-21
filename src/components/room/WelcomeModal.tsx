@@ -46,7 +46,7 @@ export function WelcomeModal({
         {/* Welcome Message Body */}
         <div className="p-6 flex flex-col gap-4 max-h-[50vh] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
           <div className="flex items-start gap-3 p-4 rounded-[12px] bg-surface border border-border-default">
-            <div className="text-[20px] shrink-0 mt-0.5">📜</div>
+            <div className="text-[20px] shrink-0 mt-0.5"></div>
             <div className="flex flex-col gap-1.5 flex-1 font-sans text-[13px] text-text-primary whitespace-pre-wrap leading-relaxed">
               <span className="font-bold text-[12px] uppercase tracking-wider text-accent-green">
                 Welcome Message from Host:
@@ -55,7 +55,7 @@ export function WelcomeModal({
             </div>
           </div>
           <p className="font-sans text-[12px] text-text-secondary text-center">
-            Please read the expectations above before joining the study session.
+           
           </p>
         </div>
 

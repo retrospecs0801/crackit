@@ -1,0 +1,9 @@
+# Query: Welcome Message from Host
+# ContextLines: 1
+
+1 result - 1 file
+
+src\components\room\WelcomeModal.tsx:
+  51                <span className="font-bold text-[12px] uppercase tracking-wider text-accent-green">
+  52:                 Welcome Message from Host:
+  53                </span>

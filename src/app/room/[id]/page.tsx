@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { LiveKitRoom } from '@livekit/components-react';
 import '@livekit/components-styles';
+import { RoomEvent } from 'livekit-client';
 import { RoomNavbar } from '@/components/layout/RoomNavbar';
 import { PomodoroTimer } from '@/components/room/PomodoroTimer';
 import { ChatSidebar } from '@/components/room/ChatSidebar';
@@ -13,7 +14,7 @@ import VideoGrid from '@/components/room/VideoGrid';
 import MediaControls from '@/components/room/MediaControls';
 import { RoomParticipantSidebar } from '@/components/room/RoomParticipantSidebar';
 import { EyeOff, LayoutGrid, Loader2, ShieldAlert } from 'lucide-react';
-import { useConnectionState, useDataChannel } from '@livekit/components-react';
+import { useConnectionState, useDataChannel, useRoomContext } from '@livekit/components-react';
 import { mockRooms } from '@/lib/mockData';
 import { WelcomeModal } from '@/components/room/WelcomeModal';
 
@@ -32,6 +33,42 @@ function RoomSettingsListener({ onSettingsUpdated }: { onSettingsUpdated: (setti
       }
     }
   }, [message, onSettingsUpdated]);
+  return null;
+}
+
+function RoomParticipantLogger({ setSystemBubbles }: { setSystemBubbles: React.Dispatch<React.SetStateAction<Array<{ id: string; text: string; timestamp: number; type?: 'system' | 'log' }>>> }) {
+  const room = useRoomContext();
+
+  useEffect(() => {
+    if (!room) return;
+
+    const handleConnect = (participant: any) => {
+      setSystemBubbles(prev => [...prev, {
+        id: `join-${participant.identity}-${Date.now()}`,
+        text: `${participant.name || participant.identity} joined`,
+        timestamp: Date.now(),
+        type: 'log'
+      }]);
+    };
+
+    const handleDisconnect = (participant: any) => {
+      setSystemBubbles(prev => [...prev, {
+        id: `leave-${participant.identity}-${Date.now()}`,
+        text: `${participant.name || participant.identity} left`,
+        timestamp: Date.now(),
+        type: 'log'
+      }]);
+    };
+
+    room.on(RoomEvent.ParticipantConnected, handleConnect);
+    room.on(RoomEvent.ParticipantDisconnected, handleDisconnect);
+
+    return () => {
+      room.off(RoomEvent.ParticipantConnected, handleConnect);
+      room.off(RoomEvent.ParticipantDisconnected, handleDisconnect);
+    };
+  }, [room, setSystemBubbles]);
+
   return null;
 }
 
@@ -74,7 +111,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
   const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showVideoGrid, setShowVideoGrid] = useState(true);
-  
+
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [roomData, setRoomData] = useState<Room | null>(null);
   const [isNotFound] = useState(false);
@@ -85,6 +122,91 @@ export default function RoomPage({ params }: { params: { id: string } }) {
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [showReady, setShowReady] = useState(true);
   const [welcomeAccepted, setWelcomeAccepted] = useState(false);
+
+  const [pomodoroState, setPomodoroState] = useState<{
+    isRunning: boolean;
+    phase: 'FOCUS' | 'BREAK';
+    lastEventType?: string;
+  }>({ isRunning: false, phase: 'FOCUS' });
+
+  const [systemBubbles, setSystemBubbles] = useState<Array<{ id: string; text: string; timestamp: number; type?: 'system' | 'log' }>>([]);
+  const [forceUnmuteTrigger, setForceUnmuteTrigger] = useState<number>(0);
+
+  const isFocusMicLocked = Boolean(
+    pomodoroState.isRunning &&
+    pomodoroState.phase === 'FOCUS' &&
+    roomData?.focusMicLockEnabled !== false
+  );
+
+  const isFocusChatLocked = Boolean(
+    pomodoroState.isRunning &&
+    pomodoroState.phase === 'FOCUS' &&
+    roomData?.focusChatLockEnabled !== false
+  );
+
+  const handlePomodoroStateChange = useCallback((state: { isRunning: boolean; phase: 'FOCUS' | 'BREAK'; lastEventType?: string }) => {
+    setPomodoroState((prev) => {
+      if (prev.isRunning === state.isRunning && prev.phase === state.phase && prev.lastEventType === state.lastEventType) {
+        return prev;
+      }
+      return state;
+    });
+  }, []);
+
+  const prevIsFocusMicLockedRef = useRef(false);
+  const prevIsFocusChatLockedRef = useRef(false);
+  const prevLastEventTypeRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (!roomData) return;
+    const prevMicLocked = prevIsFocusMicLockedRef.current;
+    const currentMicLocked = isFocusMicLocked;
+    const prevChatLocked = prevIsFocusChatLockedRef.current;
+    const currentChatLocked = isFocusChatLocked;
+    
+    const eventType = pomodoroState.lastEventType;
+    const prevEventType = prevLastEventTypeRef.current;
+
+    const lockedTypes: string[] = [];
+    if (!prevMicLocked && currentMicLocked) lockedTypes.push('mic');
+    if (!prevChatLocked && currentChatLocked) lockedTypes.push('chat');
+    
+    const unlockedTypes: string[] = [];
+    if (prevMicLocked && !currentMicLocked) unlockedTypes.push('Mic');
+    if (prevChatLocked && !currentChatLocked) unlockedTypes.push('chat');
+
+    if (lockedTypes.length > 0) {
+      setSystemBubbles((prev) => [
+        ...prev,
+        { id: `sys-${Date.now()}-lock`, text: `🔇 ${lockedTypes.join(' & ')} ${lockedTypes.length > 1 ? 'are' : 'is'} locked during focus sessions.`, timestamp: Date.now() }
+      ]);
+    }
+
+    if (unlockedTypes.length > 0) {
+      setSystemBubbles((prev) => [
+        ...prev,
+        { id: `sys-${Date.now()}-unlock`, text: `🔓 ${unlockedTypes.join(' & ')} unlocked.`, timestamp: Date.now() }
+      ]);
+    }
+    
+    if (prevMicLocked && !currentMicLocked) {
+       setForceUnmuteTrigger((c) => c + 1);
+    }
+
+    if (eventType === 'RESET' && eventType !== prevEventType && prevEventType !== undefined) {
+      if (unlockedTypes.length === 0 && (currentMicLocked || currentChatLocked || prevMicLocked || prevChatLocked)) {
+         setSystemBubbles((prev) => [
+           ...prev,
+           { id: `sys-${Date.now()}-reset`, text: '🔓 Focus locks removed.', timestamp: Date.now() }
+         ]);
+      }
+      setForceUnmuteTrigger((c) => c + 1);
+    }
+
+    prevIsFocusMicLockedRef.current = currentMicLocked;
+    prevIsFocusChatLockedRef.current = currentChatLocked;
+    prevLastEventTypeRef.current = eventType;
+  }, [isFocusMicLocked, isFocusChatLocked, pomodoroState.lastEventType, roomData]);
 
   async function fetchToken(roomId: string, user: User) {
     setTokenError(null);
@@ -143,7 +265,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
           if (stored) {
             setCurrentUser(JSON.parse(stored));
           }
-        } catch {}
+        } catch { }
         return;
       }
 
@@ -166,7 +288,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
       setCurrentUser(userObj);
       try {
         localStorage.setItem('studyhall_current_user', JSON.stringify(userObj));
-      } catch {}
+      } catch { }
     };
 
     checkAuthAndProfile();
@@ -181,7 +303,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
           setRoomData(JSON.parse(cached));
           return;
         }
-      } catch {}
+      } catch { }
 
       // 2. Check mock rooms
       const mockRoom = mockRooms.find(r => r.id === params.id);
@@ -189,7 +311,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
         setRoomData(mockRoom);
         return;
       }
-      
+
       // 3. Check Supabase rooms table
       try {
         const supabase = createClient();
@@ -239,7 +361,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
       } catch (e) {
         console.error('Error fetching live rooms:', e);
       }
-      
+
       // 5. Fallback for unknown rooms
       const fallbackRoom: Room = {
         id: params.id,
@@ -254,7 +376,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
         ownerId: 'unknown',
         createdAt: new Date().toISOString()
       };
-      
+
       setRoomData(fallbackRoom);
     };
 
@@ -269,7 +391,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     let abortFn: (() => void) | null = null;
-    
+
     const canJoin = !roomData?.welcomeMessageEnabled || !roomData?.welcomeMessageText || welcomeAccepted;
 
     if (roomData && currentUser && !livekitToken && canJoin) {
@@ -277,7 +399,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
         abortFn = cleanup ?? null;
       });
     }
-    
+
     return () => {
       if (abortFn) abortFn();
     };
@@ -331,12 +453,12 @@ export default function RoomPage({ params }: { params: { id: string } }) {
   return (
     <>
       <div className="h-screen w-full overflow-hidden flex flex-col bg-canvas text-text-primary">
-        <RoomNavbar 
-          roomName={roomData.name} 
+        <RoomNavbar
+          roomName={roomData.name}
           currentUserId={currentUser?.id}
-          onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} 
+          onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         />
-        
+
         <div className="flex-1 flex flex-row mt-[52px] h-[calc(100vh-52px)] relative">
           <style>{`
             @keyframes blinkCursor {
@@ -344,7 +466,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
               100% { opacity: 1; }
             }
           `}</style>
-          
+
           <div className="absolute top-4 right-4 z-10">
             {livekitToken === null && tokenError === null && (
               <div className="px-3 py-1 flex items-center gap-1 rounded-full shadow-sm bg-surface border border-border-default">
@@ -362,7 +484,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
                 <div className="px-3 py-1 rounded-full shadow-sm bg-accent-terracotta text-surface-raised border border-border-default">
                   <span className="font-mono text-[11px]">{tokenError}</span>
                 </div>
-                <button 
+                <button
                   onClick={() => {
                     setTokenError(null);
                     if (roomData && currentUser) {
@@ -388,6 +510,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
               style={{ height: '100%', display: 'contents' }}
             >
               <RoomSettingsListener onSettingsUpdated={(newSettings) => setRoomData(prev => prev ? { ...prev, ...newSettings } : null)} />
+              <RoomParticipantLogger setSystemBubbles={setSystemBubbles} />
               <RoomConnectionStatus roomName={roomData.name} examTag={roomData.examTag} />
 
               {/* Left Participant Avatars Dock */}
@@ -459,12 +582,14 @@ export default function RoomPage({ params }: { params: { id: string } }) {
                   <MediaControls
                     micDisabled={Boolean(roomData.micDisabled && !isOwner)}
                     cameraDisabled={Boolean(roomData.cameraDisabled && !isOwner)}
+                    isFocusMicLocked={Boolean(isFocusMicLocked && !isOwner)}
+                    forceUnmuteTrigger={forceUnmuteTrigger}
                   />
                 </div>
               </div>
 
               {/* Sidebar */}
-              <div 
+              <div
                 className={`
                   fixed inset-0 z-40 top-[52px] flex flex-col md:static md:w-[300px] md:min-w-[300px] md:z-0
                   transition-transform duration-300 bg-surface border-l border-border-default
@@ -503,7 +628,13 @@ export default function RoomPage({ params }: { params: { id: string } }) {
                     style={{ display: activeTab === 'focus' ? 'flex' : 'none' }}
                   >
                     <div className="bg-surface-raised rounded-lg border border-border-default m-3 p-4">
-                      <PomodoroTimer isOwner={isOwner} currentUserId={currentUser?.id || currentUser?.displayName || ''} />
+                      <PomodoroTimer
+                        isOwner={isOwner}
+                        currentUserId={currentUser?.id || currentUser?.displayName || ''}
+                        focusMicLockEnabled={roomData.focusMicLockEnabled}
+                        focusChatLockEnabled={roomData.focusChatLockEnabled}
+                        onPomodoroStateChange={handlePomodoroStateChange}
+                      />
                     </div>
                     <div className="flex-1 min-h-0 flex flex-col justify-center px-3 pb-3">
                       <div className="my-auto h-[60%] min-h-[300px]">
@@ -511,11 +642,14 @@ export default function RoomPage({ params }: { params: { id: string } }) {
                           roomId={roomData.id}
                           chatDisabled={Boolean(roomData.chatDisabled && !isOwner)}
                           welcomeMessageText={roomData.welcomeMessageText}
+                          isFocusChatLocked={Boolean(isFocusChatLocked && !isOwner)}
+                          focusChatLockEnabled={roomData.focusChatLockEnabled}
+                          systemBubbles={systemBubbles}
                         />
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Apps Tab */}
                   <div
                     className="absolute inset-0 flex flex-col"

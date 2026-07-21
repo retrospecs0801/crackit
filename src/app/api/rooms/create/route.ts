@@ -21,11 +21,15 @@ export async function POST(req: NextRequest) {
     const fullRoomDetails: Room = {
       ...roomDetails,
       maxStudents: roomDetails.maxStudents || 6,
+      maxParticipants: roomDetails.maxParticipants ?? roomDetails.maxStudents ?? 6,
+      camMandatory: roomDetails.camMandatory || false,
       welcomeMessageEnabled: roomDetails.welcomeMessageEnabled || false,
       welcomeMessageText: roomDetails.welcomeMessageText || undefined,
       micDisabled: roomDetails.micDisabled || false,
       cameraDisabled: roomDetails.cameraDisabled || false,
       chatDisabled: roomDetails.chatDisabled || false,
+      focusMicLockEnabled: roomDetails.focusMicLockEnabled ?? true,
+      focusChatLockEnabled: roomDetails.focusChatLockEnabled ?? true,
     };
 
     // Use http(s) for the server API client if the URL is ws(s)
@@ -35,7 +39,7 @@ export async function POST(req: NextRequest) {
     await svc.createRoom({
       name: fullRoomDetails.id,
       emptyTimeout: 5 * 60, // 5 minutes (auto-delete empty room after 5 min)
-      maxParticipants: fullRoomDetails.maxStudents,
+      maxParticipants: fullRoomDetails.maxParticipants,
       metadata: JSON.stringify(fullRoomDetails),
     });
 

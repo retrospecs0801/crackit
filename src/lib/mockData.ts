@@ -23,7 +23,7 @@ export const mockRooms: Room[] = [
   {
     id: 'r1',
     name: 'JEE Mains Grind',
-    examTag: 'JEE',
+    examTag: 'JEE Main/Advanced',
     topic: 'Rotational Motion + Electrostatics revision',
     description: 'Strict 25/5 pomodoro sessions. Mics off, cams optional. Let us crush these concepts today.',
     maxStudents: 6,

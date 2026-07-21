@@ -1,0 +1,14 @@
+# Query: profile picture is
+# ContextLines: 1
+
+2 results - 2 files
+
+src\components\profile\ProfileEditForm.tsx:
+  210              <p className="font-sans text-[11px] text-text-muted mt-0.5">
+  211:              
+  212              </p>
+
+src\components\profile\ProfileView.tsx:
+  45          <p className="font-sans text-[12px] text-text-secondary mb-5 bg-canvas px-3 py-1 rounded-full border border-border-default">
+  46:           Profile picture is same as your Google profile
+  47          </p>

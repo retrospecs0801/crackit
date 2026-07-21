@@ -11,13 +11,16 @@ interface RoomSettingsAppProps {
 
 export function RoomSettingsApp({ roomData, onUpdateRoom }: RoomSettingsAppProps) {
   const [name, setName] = useState(roomData.name);
-  const [maxStudents, setMaxStudents] = useState(roomData.maxStudents || 6);
+  const [maxParticipants, setMaxParticipants] = useState(roomData.maxParticipants ?? roomData.maxStudents ?? 6);
   const [welcomeEnabled, setWelcomeEnabled] = useState(roomData.welcomeMessageEnabled || false);
   const [welcomeText, setWelcomeText] = useState(roomData.welcomeMessageText || '');
+  const [camMandatory, setCamMandatory] = useState(roomData.camMandatory || false);
   
   const [micDisabled, setMicDisabled] = useState(roomData.micDisabled || false);
   const [cameraDisabled, setCameraDisabled] = useState(roomData.cameraDisabled || false);
   const [chatDisabled, setChatDisabled] = useState(roomData.chatDisabled || false);
+  const [focusMicLockEnabled, setFocusMicLockEnabled] = useState(roomData.focusMicLockEnabled ?? true);
+  const [focusChatLockEnabled, setFocusChatLockEnabled] = useState(roomData.focusChatLockEnabled ?? true);
   
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -35,12 +38,18 @@ export function RoomSettingsApp({ roomData, onUpdateRoom }: RoomSettingsAppProps
       id: roomData.id,
       name: name.trim(),
       examTag: roomData.examTag,
-      maxStudents: Number(maxStudents),
+      customExamLabel: roomData.customExamLabel,
+      examType: roomData.examType,
+      maxStudents: Number(maxParticipants),
+      maxParticipants: Number(maxParticipants),
+      camMandatory,
       welcomeMessageEnabled: welcomeEnabled,
       welcomeMessageText: welcomeEnabled ? welcomeText.trim() : '',
       micDisabled,
       cameraDisabled,
       chatDisabled,
+      focusMicLockEnabled,
+      focusChatLockEnabled,
     };
 
     try {
@@ -104,21 +113,50 @@ export function RoomSettingsApp({ roomData, onUpdateRoom }: RoomSettingsAppProps
       <div>
         <label className={labelStyles}>Exam Type </label>
         <div className="flex items-center px-3 h-[36px] border border-border-default bg-surface-raised rounded-lg text-text-secondary font-sans text-[13px]">
-          {roomData.examTag}
+          {roomData.customExamLabel ? `${roomData.customExamLabel} (${roomData.examTag})` : roomData.examTag}
         </div>
       </div>
 
       <div>
-        <label className={labelStyles}>Max Students (2 - 12)</label>
-        <input 
-          type="number" 
-          min={2}
-          max={12}
-          value={maxStudents}
-          onChange={(e) => setMaxStudents(Number(e.target.value))}
+        <label className={labelStyles}>Max Participants</label>
+        <select 
+          value={maxParticipants}
+          onChange={(e) => setMaxParticipants(Number(e.target.value))}
           className={inputStyles}
-          required
-        />
+        >
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+            <option key={num} value={num}>
+              {num} {num === 1 ? 'Participant' : 'Participants'}
+            </option>
+          ))}
+          <option value={20}>20 (Unlimited)</option>
+        </select>
+      </div>
+
+      {/* Require Camera On Toggle */}
+      <div className="border border-border-default rounded-lg p-3 bg-surface">
+        <div className="flex items-center justify-between cursor-pointer" onClick={() => setCamMandatory(!camMandatory)}>
+          <div className="flex flex-col">
+            <span className="font-sans font-semibold text-[12px] text-text-primary">Require Camera On</span>
+            <span className="font-sans text-[10px] text-text-secondary">Show camera required flag on card</span>
+          </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setCamMandatory(!camMandatory);
+            }}
+            className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 focus:outline-none ${
+              camMandatory ? 'bg-accent-green' : 'bg-border-default'
+            }`}
+          >
+            <div
+              className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
+                camMandatory ? 'translate-x-4' : 'translate-x-0'
+              }`}
+            />
+          </button>
+        </div>
       </div>
 
       {/* Welcome Message Toggle */}
@@ -213,6 +251,37 @@ export function RoomSettingsApp({ roomData, onUpdateRoom }: RoomSettingsAppProps
             }`}
           >
             <div className={`bg-white w-4 h-4 rounded-full shadow transform transition-transform ${chatDisabled ? 'translate-x-4' : 'translate-x-0'}`} />
+          </button>
+        </div>
+
+        {/* Focus Lock Toggles */}
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col">
+            <span className="font-sans text-[12px] text-text-primary">Lock mic during focus sessions</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFocusMicLockEnabled(!focusMicLockEnabled)}
+            className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 ${
+              focusMicLockEnabled ? 'bg-accent-green' : 'bg-border-default'
+            }`}
+          >
+            <div className={`bg-white w-4 h-4 rounded-full shadow transform transition-transform ${focusMicLockEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between mt-4">
+          <div className="flex flex-col">
+            <span className="font-sans text-[12px] text-text-primary">Lock chat during focus sessions</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFocusChatLockEnabled(!focusChatLockEnabled)}
+            className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 ${
+              focusChatLockEnabled ? 'bg-accent-green' : 'bg-border-default'
+            }`}
+          >
+            <div className={`bg-white w-4 h-4 rounded-full shadow transform transition-transform ${focusChatLockEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
           </button>
         </div>
       </div>

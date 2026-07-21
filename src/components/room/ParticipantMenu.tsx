@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Avatar } from '@/components/ui/Avatar';
 import { RelationshipStatus } from '@/types';
 import {
@@ -44,7 +43,6 @@ export function ParticipantMenu({
   onClose,
   onRemoved,
 }: ParticipantMenuProps) {
-  const router = useRouter();
   const [status, setStatus] = useState<RelationshipStatus>('none');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);

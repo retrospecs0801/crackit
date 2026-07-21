@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { GoogleSignInModal } from '@/components/auth/GoogleSignInModal';
 import { Avatar } from '@/components/ui/Avatar';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Video } from 'lucide-react';
 
 export function RoomCard({ room }: { room: Room }) {
   const router = useRouter();
@@ -17,8 +17,13 @@ export function RoomCard({ room }: { room: Room }) {
   const displayMembers = room.members.slice(0, 4);
   const extraMembers = room.members.length - 4;
 
+  const maxCapacity = room.maxParticipants ?? room.maxStudents ?? 6;
+  const isUnlimited = maxCapacity >= 20;
+  const isFull = !isUnlimited && room.currentStudents >= maxCapacity;
+  const studentCountText = isUnlimited ? `${room.currentStudents}/∞` : `${room.currentStudents}/${maxCapacity}`;
+
   const handleJoin = async () => {
-    if (room.isMock || isJoining) return;
+    if (room.isMock || isJoining || isFull) return;
     setJoinError(null);
 
     const supabase = createClient();
@@ -44,11 +49,14 @@ export function RoomCard({ room }: { room: Room }) {
   };
 
   const getStatusColor = () => {
-    const ratio = room.currentStudents / room.maxStudents;
-    if (ratio >= 1) return 'var(--accent-terracotta)';
+    const ratio = room.currentStudents / maxCapacity;
+    if (isFull || ratio >= 1) return 'var(--accent-terracotta)';
     if (ratio >= 0.5) return '#D97706';
     return 'var(--accent-green)';
   };
+
+  const isCustomExam = room.examTag === 'custom' || room.examTag === 'Custom' || room.examType === 'custom';
+  const examBadgeText = isCustomExam ? (room.customExamLabel || 'Custom Exam') : room.examTag;
 
   return (
     <>
@@ -57,38 +65,46 @@ export function RoomCard({ room }: { room: Room }) {
         style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
       >
         
-        {/* Header */}
-        <div className="flex justify-between items-start gap-2">
-          <h3 className="font-sans text-[15px] font-semibold text-text-primary leading-tight flex-1">
+        {/* Header with Exam Badge & Title */}
+        <div className="flex flex-col gap-2">
+          <div className="flex justify-between items-center gap-2">
+            <span 
+              className="font-mono text-[11px] font-semibold rounded-full px-2.5 py-0.5 border border-border-default bg-surface-raised text-accent-green inline-block w-fit shadow-xs truncate max-w-[200px]"
+            >
+              {examBadgeText}
+            </span>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              {room.camMandatory && (
+                <span title="Camera required (recommended by host)" className="flex items-center gap-1 text-[11px] font-mono text-accent-terracotta bg-accent-terracotta/10 px-1.5 py-0.5 rounded-md border border-accent-terracotta/20">
+                  <Video size={12} className="shrink-0" />
+                  <span>Cam Req</span>
+                </span>
+              )}
+              <span className="w-[7px] h-[7px] rounded-full" style={{ backgroundColor: getStatusColor() }}></span>
+              <span className="font-mono text-[12px] text-text-secondary shrink-0">
+                {studentCountText}
+              </span>
+            </div>
+          </div>
+
+          <h3 className="font-sans text-[16px] font-bold text-text-primary leading-tight truncate">
             {room.name}
           </h3>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className="w-[7px] h-[7px] rounded-full" style={{ backgroundColor: getStatusColor() }}></span>
-            <span className="font-mono text-[12px] text-text-secondary shrink-0">
-              {room.currentStudents}/{room.maxStudents}
-            </span>
-          </div>
         </div>
 
         {/* Body */}
-        <div className="flex flex-col gap-1.5 flex-1 mt-1">
-          <div>
-            <span 
-              className="font-sans font-medium text-[11px] rounded-full px-[10px] py-[2px] whitespace-nowrap"
-              style={{ 
-                backgroundColor: `var(--tag-${room.examTag.toLowerCase()}-bg, var(--border-default))`,
-                color: `var(--tag-${room.examTag.toLowerCase()}-text, var(--text-primary))` 
-              }}
-            >
-              {room.examTag}
-            </span>
-          </div>
-          <p className="font-sans font-medium text-[13px] text-text-primary truncate mt-1">
-            {room.topic}
-          </p>
-          <p className="font-sans font-normal text-[12px] text-text-secondary line-clamp-2 leading-relaxed h-9">
-            {room.description}
-          </p>
+        <div className="flex flex-col gap-1 flex-1 mt-0.5">
+          {room.topic && (
+            <p className="font-sans font-medium text-[13px] text-text-primary truncate">
+              {room.topic}
+            </p>
+          )}
+          {room.description && (
+            <p className="font-sans font-normal text-[12px] text-text-secondary line-clamp-2 leading-relaxed h-9">
+              {room.description}
+            </p>
+          )}
         </div>
 
         {/* Footer */}
@@ -122,9 +138,9 @@ export function RoomCard({ room }: { room: Room }) {
           <div className="flex flex-col items-end gap-1">
             <button
               onClick={handleJoin}
-              disabled={room.isMock || isJoining}
+              disabled={room.isMock || isJoining || isFull}
               className={`border rounded-[7px] font-sans font-semibold text-[12px] px-[14px] py-[6px] transition-colors duration-200 flex items-center justify-center ${
-                room.isMock || isJoining
+                room.isMock || isJoining || isFull
                   ? 'opacity-70 cursor-not-allowed'
                   : 'bg-transparent border-border-default text-text-primary hover:bg-text-primary hover:text-surface-raised hover:border-text-primary'
               }`}
@@ -135,6 +151,8 @@ export function RoomCard({ room }: { room: Room }) {
                   <Loader2 className="animate-spin w-3.5 h-3.5 inline mr-1.5" />
                   Joining...
                 </>
+              ) : isFull ? (
+                'Room is Full'
               ) : room.isMock ? (
                 'Demo Only'
               ) : (
