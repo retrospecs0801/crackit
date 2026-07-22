@@ -68,6 +68,11 @@ export type Profile = {
   created_at?: string;
 };
 
+export interface RoomRoleState {
+  owner: string | null;          // displayName, existing field (or null when disconnected)
+  coOwners: string[];            // NEW — list of displayNames
+}
+
 export type Room = {
   id: string;
   name: string;
@@ -83,6 +88,9 @@ export type Room = {
   members: User[];
   owner_id: string;
   ownerId?: string;
+  owner?: string | null;
+  co_owners?: string[];
+  coOwners?: string[];
   createdAt: string;
   isMock?: boolean;
   welcomeMessageEnabled?: boolean;

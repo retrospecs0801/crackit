@@ -3,8 +3,9 @@
 import React, { useState } from 'react';
 import { useParticipants } from '@livekit/components-react';
 import { Avatar } from '@/components/ui/Avatar';
-import { LayoutGrid, EyeOff, Users } from 'lucide-react';
+import { LayoutGrid, EyeOff, Users, Crown, ShieldCheck } from 'lucide-react';
 import { ParticipantMenu } from '@/components/room/ParticipantMenu';
+import { RoomRoleState } from '@/types';
 
 interface RoomParticipantSidebarProps {
   showVideoGrid: boolean;
@@ -13,6 +14,10 @@ interface RoomParticipantSidebarProps {
   currentUserId?: string | null;
   roomName?: string;
   isRoomOwner?: boolean;
+  isCoOwner?: boolean;
+  canControlRoom?: boolean;
+  roomRoles?: RoomRoleState;
+  onUpdateRoles?: (updater: (prev: RoomRoleState) => RoomRoleState) => void;
 }
 
 export function RoomParticipantSidebar({
@@ -22,6 +27,10 @@ export function RoomParticipantSidebar({
   currentUserId = null,
   roomName = '',
   isRoomOwner = false,
+  isCoOwner = false,
+  canControlRoom = false,
+  roomRoles,
+  onUpdateRoles,
 }: RoomParticipantSidebarProps) {
   const participants = useParticipants();
   const [selectedParticipant, setSelectedParticipant] = useState<{
@@ -61,7 +70,8 @@ export function RoomParticipantSidebar({
               }
             } catch { }
 
-            const isParticipantOwner = identity === ownerId || (parsedUserId !== null && parsedUserId === ownerId);
+            const isParticipantOwner = Boolean((roomRoles?.owner && (displayName === roomRoles.owner || identity === roomRoles.owner)) || identity === ownerId || (parsedUserId !== null && parsedUserId === ownerId));
+            const isParticipantCoOwner = Boolean(!isParticipantOwner && roomRoles && Array.isArray(roomRoles.coOwners) && (roomRoles.coOwners.includes(displayName) || roomRoles.coOwners.includes(identity) || (parsedUserId !== null && roomRoles.coOwners.includes(parsedUserId))));
             const isSelected = selectedParticipant?.id === identity;
 
             return (
@@ -82,9 +92,11 @@ export function RoomParticipantSidebar({
                 }}
                 className={`group relative rounded-full p-0.5 transition-all duration-200 hover:scale-105 active:scale-95 focus:outline-none ${isParticipantOwner
                     ? 'border-2 border-[#F59E0B] shadow-[0_0_12px_rgba(245,158,11,0.6)]'
-                    : isSelected
-                      ? 'border-2 border-accent-green'
-                      : 'border border-border-default hover:border-accent-green'
+                    : isParticipantCoOwner
+                      ? 'border-2 border-[#3B82F6] shadow-[0_0_12px_rgba(59,130,246,0.6)]'
+                      : isSelected
+                        ? 'border-2 border-accent-green'
+                        : 'border border-border-default hover:border-accent-green'
                   }`}
               >
                 <Avatar
@@ -98,10 +110,20 @@ export function RoomParticipantSidebar({
                 {/* Crown badge for room owner */}
                 {isParticipantOwner && (
                   <span
-                    className="absolute -top-1.5 -right-1.5 bg-[#F59E0B] text-black rounded-full w-4 h-4 flex items-center justify-center text-[9px] shadow-md z-10"
+                    className="absolute -top-1.5 -right-1.5 bg-[#F59E0B] text-black rounded-full w-4 h-4 flex items-center justify-center shadow-md z-10"
                     title="Room Owner"
                   >
+                    <Crown size={10} strokeWidth={2.5} />
+                  </span>
+                )}
 
+                {/* Shield badge for co-owner */}
+                {isParticipantCoOwner && (
+                  <span
+                    className="absolute -top-1.5 -right-1.5 bg-[#3B82F6] text-white rounded-full w-4 h-4 flex items-center justify-center shadow-md z-10"
+                    title="Co-Owner"
+                  >
+                    <ShieldCheck size={10} strokeWidth={2.5} />
                   </span>
                 )}
 
@@ -112,7 +134,8 @@ export function RoomParticipantSidebar({
 
                 {/* Tooltip on hover */}
                 <span className="pointer-events-none absolute left-14 top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1 rounded-md bg-surface-raised border border-border-default text-text-primary text-xs font-sans whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-xl flex items-center gap-1.5">
-                  {isParticipantOwner && <span className="text-[#F59E0B] font-bold">  Room Owner:</span>}
+                  {isParticipantOwner && <span className="text-[#F59E0B] font-bold flex items-center gap-1"><Crown size={12} /> Owner:</span>}
+                  {isParticipantCoOwner && <span className="text-[#3B82F6] font-bold flex items-center gap-1"><ShieldCheck size={12} /> Co-Owner:</span>}
                   <span>{displayName}</span>
                 </span>
               </button>
@@ -132,6 +155,9 @@ export function RoomParticipantSidebar({
             targetAvatarColor={selectedParticipant.avatarColor}
             roomName={roomName}
             isRoomOwner={isRoomOwner}
+            isCoOwner={isCoOwner}
+            roomRoles={roomRoles}
+            onUpdateRoles={onUpdateRoles}
             onClose={() => setSelectedParticipant(null)}
             onRemoved={() => setSelectedParticipant(null)}
           />

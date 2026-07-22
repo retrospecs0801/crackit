@@ -7,6 +7,7 @@ import { Pencil, Check, X } from 'lucide-react';
 
 interface PomodoroTimerProps {
   isOwner: boolean;
+  canControlRoom?: boolean;
   currentUserId: string;
   focusMicLockEnabled?: boolean;
   focusChatLockEnabled?: boolean;
@@ -15,8 +16,9 @@ interface PomodoroTimerProps {
 
 type Preset = '25/5' | '50/10' | 'custom';
 
-export function PomodoroTimer({ isOwner, focusMicLockEnabled, focusChatLockEnabled, onPomodoroStateChange }: PomodoroTimerProps) {
+export function PomodoroTimer({ isOwner, canControlRoom, focusMicLockEnabled, focusChatLockEnabled, onPomodoroStateChange }: PomodoroTimerProps) {
   const [activeTab, setActiveTab] = useState<'room' | 'personal'>('room');
+  const effectiveCanControl = canControlRoom ?? isOwner;
 
   // --- ROOM TIMER STATE ---
   const [preset, setPreset] = useState<Preset>('25/5');
@@ -64,7 +66,7 @@ export function PomodoroTimer({ isOwner, focusMicLockEnabled, focusChatLockEnabl
 
   // Room Pomodoro Hook
   const { timeLeft, phase, isRunning, start, pause, reset } = usePomodoro({
-    isOwner,
+    isOwner: effectiveCanControl,
     onBroadcast,
     externalEvent,
     focusDuration,
@@ -161,7 +163,7 @@ export function PomodoroTimer({ isOwner, focusMicLockEnabled, focusChatLockEnabl
 
   // Room timer actions
   const handleRoomPresetChange = (newPreset: Exclude<Preset, 'custom'>) => {
-    if (isRunning || !isOwner) return;
+    if (isRunning || !effectiveCanControl) return;
     setPreset(newPreset);
     const newFocus = newPreset === '25/5' ? 25 * 60 : 50 * 60;
     const newBreak = newPreset === '25/5' ? 5 * 60 : 10 * 60;
@@ -300,8 +302,8 @@ export function PomodoroTimer({ isOwner, focusMicLockEnabled, focusChatLockEnabl
             {phase}
           </div>
 
-          {/* Phase Preset Selector — owner only */}
-          {isOwner && (
+          {/* Phase Preset Selector — owner & co-owner */}
+          {effectiveCanControl && (
             <div className="flex items-center gap-2 mb-3">
               {!isEditing ? (
                 <>
@@ -389,23 +391,23 @@ export function PomodoroTimer({ isOwner, focusMicLockEnabled, focusChatLockEnabl
             {roomMinutes}:{roomSeconds}
           </div>
 
-          {/* Sync status for non-owners */}
-          {!isOwner && isRunning && (
+          {/* Sync status for non-controllers */}
+          {!effectiveCanControl && isRunning && (
             <div className="font-sans text-[10px] mb-3 text-text-secondary">
               Synced with room
             </div>
           )}
-          {!isOwner && !isRunning && (
+          {!effectiveCanControl && !isRunning && (
             <div className="font-sans text-[11px] mb-3 text-text-secondary">
-              Waiting for owner to start...
+              Waiting for host to start...
             </div>
           )}
 
-          {/* Spacer for owner when no status message */}
-          {isOwner && <div className="mb-3" />}
+          {/* Spacer for controllers when no status message */}
+          {effectiveCanControl && <div className="mb-3" />}
 
-          {/* Controls — owner only */}
-          {isOwner && (
+          {/* Controls — owner & co-owner */}
+          {effectiveCanControl && (
             <>
               <div className="flex gap-2 mb-3">
                 {!isRunning ? (
@@ -431,9 +433,9 @@ export function PomodoroTimer({ isOwner, focusMicLockEnabled, focusChatLockEnabl
                 </button>
               </div>
 
-              {/* Owner label */}
+              {/* Controller label */}
               <div className="font-sans text-[10px] text-accent-green font-medium">
-                You control the timer
+                {isOwner ? 'Host — you control the timer' : 'Co-Owner — you control the timer'}
               </div>
             </>
           )}

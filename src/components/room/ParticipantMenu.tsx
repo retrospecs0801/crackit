@@ -18,34 +18,70 @@ import {
   ExternalLink,
   X,
   Loader2,
+  Crown,
+  UserMinus,
+  ArrowRightLeft,
 } from 'lucide-react';
+import { useDataChannel, useParticipants } from '@livekit/components-react';
+import { RoomRoleState } from '@/types';
 
 interface ParticipantMenuProps {
   currentUserId: string | null;
+  currentUserDisplayName?: string | null;
   targetUserId: string;
   targetDisplayName: string;
   targetAvatarUrl?: string | null;
   targetAvatarColor?: string;
   roomName?: string;
   isRoomOwner: boolean;
+  isCoOwner?: boolean;
+  roomRoles?: RoomRoleState;
+  onUpdateRoles?: (updater: (prev: RoomRoleState) => RoomRoleState) => void;
   onClose: () => void;
   onRemoved?: () => void;
 }
 
 export function ParticipantMenu({
   currentUserId,
+  currentUserDisplayName,
   targetUserId,
   targetDisplayName,
   targetAvatarUrl,
   targetAvatarColor,
   roomName,
   isRoomOwner,
+  isCoOwner,
+  roomRoles,
+  onUpdateRoles,
   onClose,
   onRemoved,
 }: ParticipantMenuProps) {
   const [status, setStatus] = useState<RelationshipStatus>('none');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [confirmDemote, setConfirmDemote] = useState(false);
+  const [confirmTransfer, setConfirmTransfer] = useState(false);
+
+  const { send } = useDataChannel('room-roles');
+  const participants = useParticipants();
+  const localParticipant = participants.find(p => p.isLocal);
+
+  let localDisplayName = currentUserDisplayName || null;
+  if (!localDisplayName && localParticipant) {
+    localDisplayName = localParticipant.name || localParticipant.identity;
+    try {
+      if (localParticipant.metadata) {
+        const m = JSON.parse(localParticipant.metadata);
+        if (m.displayName) localDisplayName = m.displayName;
+      }
+    } catch {}
+  }
+
+  const viewerIsOwner = Boolean(isRoomOwner || (roomRoles && localDisplayName && roomRoles.owner === localDisplayName));
+  const viewerIsCoOwner = Boolean(isCoOwner || (roomRoles && localDisplayName && roomRoles.coOwners.includes(localDisplayName)));
+  const targetIsOwner = Boolean(roomRoles && roomRoles.owner && targetDisplayName === roomRoles.owner);
+  const targetIsCoOwner = Boolean(roomRoles && roomRoles.coOwners && roomRoles.coOwners.includes(targetDisplayName));
+  const isViewingSelf = Boolean((currentUserId && currentUserId === targetUserId) || (localDisplayName && localDisplayName === targetDisplayName) || (localParticipant && localParticipant.identity === targetUserId));
 
   useEffect(() => {
     let isMounted = true;
@@ -119,6 +155,107 @@ export function ParticipantMenu({
       console.error('Error removing participant:', err);
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handlePromoteToCoOwner = async () => {
+    if (!roomName) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch('/api/rooms/roles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roomId: roomName,
+          action: 'promote',
+          targetUserId,
+          targetDisplayName,
+        }),
+      });
+      if (res.ok) {
+        onUpdateRoles?.(prev => ({
+          ...prev,
+          coOwners: prev.coOwners.includes(targetDisplayName) ? prev.coOwners : [...prev.coOwners, targetDisplayName]
+        }));
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Failed to promote to co-owner');
+      }
+    } catch (e) {
+      console.error('Failed to promote co-owner:', e);
+    } finally {
+      setActionLoading(false);
+      onClose();
+    }
+  };
+
+  const handleDemoteCoOwner = async () => {
+    if (!roomName) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch('/api/rooms/roles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roomId: roomName,
+          action: 'demote',
+          targetUserId,
+          targetDisplayName,
+        }),
+      });
+      if (res.ok) {
+        onUpdateRoles?.(prev => ({
+          ...prev,
+          coOwners: prev.coOwners.filter(n => n !== targetDisplayName)
+        }));
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Failed to remove co-owner role');
+      }
+    } catch (e) {
+      console.error('Failed to demote co-owner:', e);
+    } finally {
+      setActionLoading(false);
+      onClose();
+    }
+  };
+
+  const handleTransferOwnership = async () => {
+    if (!roomName) return;
+    const currentOwner = roomRoles?.owner || localDisplayName;
+    if (!currentOwner) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch('/api/rooms/roles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roomId: roomName,
+          action: 'transfer',
+          targetUserId,
+          targetDisplayName,
+        }),
+      });
+      if (res.ok) {
+        onUpdateRoles?.(prev => {
+          const filtered = prev.coOwners.filter(n => n !== targetDisplayName);
+          const nextCoOwners = currentOwner !== targetDisplayName && !filtered.includes(currentOwner)
+            ? [...filtered, currentOwner]
+            : filtered;
+          return {
+            owner: targetDisplayName,
+            coOwners: nextCoOwners,
+          };
+        });
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Failed to transfer room ownership');
+      }
+    } catch (e) {
+      console.error('Failed to transfer ownership:', e);
+    } finally {
+      setActionLoading(false);
+      onClose();
     }
   };
 
@@ -217,16 +354,123 @@ export function ParticipantMenu({
           </>
         )}
 
-        {/* Owner Remove option */}
-        {isRoomOwner && currentUserId && currentUserId !== targetUserId && (
-          <button
-            onClick={handleRemoveFromRoom}
-            disabled={actionLoading}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-accent-terracotta hover:bg-accent-terracotta/10 transition-colors border border-transparent hover:border-accent-terracotta mt-1"
-          >
-            <LogOut size={14} />
-            <span>Remove from room</span>
-          </button>
+        {/* Role & Room Management Options (Owner / Co-Owner) */}
+        {!isViewingSelf && !confirmTransfer && !confirmDemote && (
+          <div className="flex flex-col gap-1.5 pt-1 border-t border-border-default mt-1">
+            {/* Owner viewing regular participant: Make Co-Owner, Transfer Room, Kick */}
+            {viewerIsOwner && !targetIsOwner && !targetIsCoOwner && (
+              <>
+                <button
+                  onClick={handlePromoteToCoOwner}
+                  disabled={actionLoading}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-accent-green hover:bg-accent-green/10 transition-colors"
+                >
+                  <Crown size={14} />
+                  <span>Make Co-Owner</span>
+                </button>
+                <button
+                  onClick={() => setConfirmTransfer(true)}
+                  disabled={actionLoading}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-text-primary hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                >
+                  <ArrowRightLeft size={14} />
+                  <span>Transfer Room</span>
+                </button>
+                {currentUserId && (
+                  <button
+                    onClick={handleRemoveFromRoom}
+                    disabled={actionLoading}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-accent-terracotta hover:bg-accent-terracotta/10 transition-colors"
+                  >
+                    <LogOut size={14} />
+                    <span>Remove from room</span>
+                  </button>
+                )}
+              </>
+            )}
+
+            {/* Owner viewing co-owner: Remove Co-Owner, Transfer Room (NO Kick) */}
+            {viewerIsOwner && targetIsCoOwner && (
+              <>
+                <button
+                  onClick={() => setConfirmDemote(true)}
+                  disabled={actionLoading}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-accent-terracotta hover:bg-accent-terracotta/10 transition-colors"
+                >
+                  <UserMinus size={14} />
+                  <span>Remove Co-Owner</span>
+                </button>
+                <button
+                  onClick={() => setConfirmTransfer(true)}
+                  disabled={actionLoading}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-text-primary hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                >
+                  <ArrowRightLeft size={14} />
+                  <span>Transfer Room</span>
+                </button>
+              </>
+            )}
+
+            {/* Co-owner viewing regular participant: Kick ONLY */}
+            {viewerIsCoOwner && !viewerIsOwner && !targetIsOwner && !targetIsCoOwner && currentUserId && (
+              <button
+                onClick={handleRemoveFromRoom}
+                disabled={actionLoading}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-accent-terracotta hover:bg-accent-terracotta/10 transition-colors"
+              >
+                <LogOut size={14} />
+                <span>Remove from room</span>
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Demote confirmation dialog (#5) */}
+        {confirmDemote && (
+          <div className="w-full p-2.5 rounded-lg bg-surface border border-accent-terracotta/40 flex flex-col gap-2 mt-1">
+            <span className="text-xs font-semibold text-text-primary">Are you sure you want to remove co-owner?</span>
+            <div className="flex gap-2">
+              <button
+                onClick={handleDemoteCoOwner}
+                className="flex-1 py-1.5 rounded bg-accent-terracotta text-surface-raised text-xs font-semibold hover:opacity-90 transition-opacity"
+              >
+                Yes, Demote
+              </button>
+              <button
+                onClick={() => setConfirmDemote(false)}
+                className="flex-1 py-1.5 rounded bg-surface-raised border border-border-default text-text-secondary text-xs font-medium hover:text-text-primary transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Transfer confirmation dialog (#5) */}
+        {confirmTransfer && (
+          <div className="w-full p-3 rounded-lg bg-surface border border-accent-terracotta flex flex-col gap-2.5 mt-1">
+            <div className="flex items-start gap-2 text-accent-terracotta">
+              <ShieldAlert size={16} className="shrink-0 mt-0.5" />
+              <span className="text-xs font-semibold">Confirm transferring ownership to {targetDisplayName}?</span>
+            </div>
+            <p className="text-[11px] text-text-secondary leading-normal">
+              You will become a co-owner after transferring ownership.
+            </p>
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={handleTransferOwnership}
+                className="flex-1 py-1.5 rounded bg-accent-terracotta text-surface-raised text-xs font-semibold hover:opacity-90 transition-opacity"
+              >
+                Confirm
+              </button>
+              <button
+                onClick={() => setConfirmTransfer(false)}
+                className="flex-1 py-1.5 rounded bg-surface-raised border border-border-default text-text-secondary text-xs font-medium hover:text-text-primary transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>

@@ -14,7 +14,7 @@ import VideoGrid from '@/components/room/VideoGrid';
 import MediaControls from '@/components/room/MediaControls';
 import { RoomParticipantSidebar } from '@/components/room/RoomParticipantSidebar';
 import { EyeOff, LayoutGrid, Loader2, ShieldAlert, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useConnectionState, useDataChannel, useRoomContext } from '@livekit/components-react';
+import { useConnectionState, useDataChannel, useRoomContext, useParticipants } from '@livekit/components-react';
 import { mockRooms } from '@/lib/mockData';
 import { WelcomeModal } from '@/components/room/WelcomeModal';
 
@@ -33,6 +33,130 @@ function RoomSettingsListener({ onSettingsUpdated }: { onSettingsUpdated: (setti
       }
     }
   }, [message, onSettingsUpdated]);
+  return null;
+}
+
+function RoomRolesSyncManager({
+  roomRoles,
+  onUpdateRoles,
+  isOwner,
+}: {
+  roomRoles: RoomRoleState;
+  onUpdateRoles: (updater: (prev: RoomRoleState) => RoomRoleState) => void;
+  isOwner: boolean;
+}) {
+  const { message, send } = useDataChannel('room-roles');
+  const room = useRoomContext();
+  const participants = useParticipants();
+  const prevCountRef = useRef(participants.length);
+  const roomRolesRef = useRef(roomRoles);
+  const isOwnerRef = useRef(isOwner);
+
+  useEffect(() => { roomRolesRef.current = roomRoles; }, [roomRoles]);
+  useEffect(() => { isOwnerRef.current = isOwner; }, [isOwner]);
+
+  useEffect(() => {
+    if (!message) return;
+    try {
+      const decoded = new TextDecoder().decode(message.payload);
+      const event = JSON.parse(decoded);
+      if (event.type === 'ROLE_SYNC' && event.roles) {
+        onUpdateRoles(() => event.roles);
+      } else if (event.type === 'ROLE_PROMOTE' && event.targetDisplayName) {
+        onUpdateRoles(prev => ({
+          ...prev,
+          coOwners: prev.coOwners.includes(event.targetDisplayName)
+            ? prev.coOwners
+            : [...prev.coOwners, event.targetDisplayName]
+        }));
+      } else if (event.type === 'ROLE_DEMOTE' && event.targetDisplayName) {
+        onUpdateRoles(prev => ({
+          ...prev,
+          coOwners: prev.coOwners.filter(name => name !== event.targetDisplayName)
+        }));
+      } else if (event.type === 'ROOM_TRANSFER' && event.newOwnerDisplayName) {
+        const oldOwner = event.oldOwnerDisplayName || prevOwnerHelper(roomRolesRef.current);
+        onUpdateRoles(prev => {
+          const filtered = prev.coOwners.filter(n => n !== event.newOwnerDisplayName);
+          const nextCoOwners = oldOwner && oldOwner !== event.newOwnerDisplayName && !filtered.includes(oldOwner)
+            ? [...filtered, oldOwner]
+            : filtered;
+          return {
+            owner: event.newOwnerDisplayName,
+            coOwners: nextCoOwners
+          };
+        });
+      }
+    } catch (e) {
+      console.error('Failed to parse room-roles message:', e);
+    }
+  }, [message, onUpdateRoles]);
+
+  function prevOwnerHelper(current: RoomRoleState) {
+    return current.owner;
+  }
+
+  useEffect(() => {
+    const currentCount = participants.length;
+    const prevCount = prevCountRef.current;
+    if (isOwnerRef.current && currentCount > prevCount) {
+      try {
+        const payload = new TextEncoder().encode(JSON.stringify({
+          type: 'ROLE_SYNC',
+          roles: roomRolesRef.current,
+        }));
+        send(payload, { reliable: true });
+      } catch (e) {
+        console.error('Failed to broadcast ROLE_SYNC:', e);
+      }
+    }
+    prevCountRef.current = currentCount;
+  }, [participants.length, send]);
+
+  return null;
+}
+
+function RoomPresenceMonitor({
+  ownerId,
+  ownerDisplayName,
+  isOwner,
+  setIsOwnerPresent,
+}: {
+  ownerId?: string | null;
+  ownerDisplayName?: string | null;
+  isOwner: boolean;
+  setIsOwnerPresent: (present: boolean) => void;
+}) {
+  const participants = useParticipants();
+
+  useEffect(() => {
+    if (isOwner) {
+      setIsOwnerPresent(true);
+      return;
+    }
+    let found = false;
+    for (const p of participants) {
+      let dName = p.name || p.identity;
+      let parsedUserId: string | null = null;
+      try {
+        if (p.metadata) {
+          const m = JSON.parse(p.metadata);
+          if (m.displayName) dName = m.displayName;
+          if (m.userId) parsedUserId = m.userId;
+        }
+      } catch {}
+
+      if (
+        (ownerId && (p.identity === ownerId || parsedUserId === ownerId)) ||
+        (ownerDisplayName && dName === ownerDisplayName)
+      ) {
+        found = true;
+        break;
+      }
+    }
+    setIsOwnerPresent(found);
+  }, [participants, isOwner, ownerId, ownerDisplayName, setIsOwnerPresent]);
+
   return null;
 }
 
@@ -102,7 +226,7 @@ function RoomConnectionStatus({ roomName, examTag }: { roomName: string; examTag
 }
 import { getAvatarColor } from '@/lib/utils';
 import { logRoomJoin } from '@/lib/supabase/stats';
-import { Room, User } from '@/types';
+import { Room, User, RoomRoleState } from '@/types';
 import { createClient } from '@/lib/supabase/client';
 import { GoogleSignInModal } from '@/components/auth/GoogleSignInModal';
 
@@ -152,6 +276,8 @@ export default function RoomPage({ params }: { params: { id: string } }) {
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [roomData, setRoomData] = useState<Room | null>(null);
+  const [roomRoles, setRoomRoles] = useState<RoomRoleState>({ owner: null, coOwners: [] });
+  const [isOwnerPresent, setIsOwnerPresent] = useState(true);
   const [isNotFound] = useState(false);
   const [activeTab, setActiveTab] = useState<'focus' | 'apps'>('focus');
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -466,12 +592,48 @@ export default function RoomPage({ params }: { params: { id: string } }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const isOwner = Boolean(
+  useEffect(() => {
+    if (!roomData) return;
+    let initialOwner: string | null = null;
+    if (currentUser && (currentUser.id === roomData.owner_id || currentUser.id === roomData.ownerId)) {
+      initialOwner = currentUser.displayName;
+    } else if (roomData.owner) {
+      initialOwner = roomData.owner;
+    } else {
+      const creatorMember = roomData.members.find(m => m.id === roomData.owner_id || m.id === roomData.ownerId);
+      if (creatorMember) {
+        initialOwner = creatorMember.displayName;
+      } else {
+        initialOwner = roomData.owner_id || null;
+      }
+    }
+    const initialCoOwners = roomData.co_owners || roomData.coOwners || [];
+    setRoomRoles({ owner: initialOwner, coOwners: initialCoOwners });
+  }, [roomData?.id, roomData?.owner_id, roomData?.ownerId, roomData?.owner, roomData?.co_owners, roomData?.coOwners, currentUser?.id, currentUser?.displayName]);
+
+  const isOriginalCreator = Boolean(
     currentUser && roomData && (
       currentUser.id === roomData.owner_id ||
       currentUser.id === roomData.ownerId
     )
   );
+
+  const isOwner = Boolean(
+    isOriginalCreator ||
+    (currentUser && roomRoles.owner && (
+      currentUser.displayName === roomRoles.owner ||
+      currentUser.id === roomRoles.owner
+    ))
+  );
+
+  const isCoOwner = Boolean(
+    currentUser && !isOwner && (
+      roomRoles.coOwners.includes(currentUser.displayName) ||
+      roomRoles.coOwners.includes(currentUser.id)
+    )
+  );
+
+  const canControlRoom = Boolean(isOwner || (isCoOwner && isOwnerPresent));
 
   if (isNotFound) {
     return (
@@ -548,6 +710,17 @@ export default function RoomPage({ params }: { params: { id: string } }) {
               style={{ height: '100%', display: 'contents' }}
             >
               <RoomSettingsListener onSettingsUpdated={(newSettings) => setRoomData(prev => prev ? { ...prev, ...newSettings } : null)} />
+              <RoomRolesSyncManager
+                roomRoles={roomRoles}
+                onUpdateRoles={(updater) => setRoomRoles(updater)}
+                isOwner={isOwner}
+              />
+              <RoomPresenceMonitor
+                ownerId={roomData.owner_id || roomData.ownerId}
+                ownerDisplayName={roomRoles.owner || roomData.owner}
+                isOwner={isOwner}
+                setIsOwnerPresent={setIsOwnerPresent}
+              />
               <RoomParticipantLogger setSystemBubbles={setSystemBubbles} />
               <RoomConnectionStatus roomName={roomData.name} examTag={roomData.examTag} />
 
@@ -559,6 +732,10 @@ export default function RoomPage({ params }: { params: { id: string } }) {
                 currentUserId={currentUser?.id}
                 roomName={roomData.id}
                 isRoomOwner={isOwner}
+                isCoOwner={isCoOwner}
+                canControlRoom={canControlRoom}
+                roomRoles={roomRoles}
+                onUpdateRoles={(updater) => setRoomRoles(updater)}
               />
 
               {/* Main Column */}
@@ -584,7 +761,11 @@ export default function RoomPage({ params }: { params: { id: string } }) {
                         currentUserId={currentUser?.id}
                         roomName={roomData.id}
                         isRoomOwner={isOwner}
+                        isCoOwner={isCoOwner}
+                        canControlRoom={canControlRoom}
                         ownerId={roomData.owner_id || roomData.ownerId}
+                        roomRoles={roomRoles}
+                        onUpdateRoles={(updater) => setRoomRoles(updater)}
                       />
                     ) : (
                       <div className="w-full h-full rounded-xl border border-border-default bg-gradient-to-br from-surface via-canvas to-surface-raised flex flex-col items-center justify-center p-6 relative overflow-hidden select-none">
@@ -617,10 +798,16 @@ export default function RoomPage({ params }: { params: { id: string } }) {
 
                 {/* Floating Bottom Controls Pill */}
                 <div className="pt-4 shrink-0 z-20">
+                  {!isOwner && !isOwnerPresent && (
+                    <div className="mb-2 px-3 py-1.5 rounded-lg bg-surface-raised border border-accent-terracotta/40 flex items-center justify-center gap-2 text-xs font-sans font-medium text-accent-terracotta shadow-sm">
+                      <span className="w-2 h-2 rounded-full bg-accent-terracotta animate-pulse" />
+                      <span>Room owner disconnected — controls locked</span>
+                    </div>
+                  )}
                   <MediaControls
-                    micDisabled={Boolean(roomData.micDisabled && !isOwner)}
-                    cameraDisabled={Boolean(roomData.cameraDisabled && !isOwner)}
-                    isFocusMicLocked={Boolean(isFocusMicLocked && !isOwner)}
+                    micDisabled={Boolean(roomData.micDisabled && !canControlRoom)}
+                    cameraDisabled={Boolean(roomData.cameraDisabled && !canControlRoom)}
+                    isFocusMicLocked={Boolean(isFocusMicLocked && !canControlRoom)}
                     forceUnmuteTrigger={forceUnmuteTrigger}
                   />
                 </div>
@@ -712,6 +899,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
                     <div className="bg-surface-raised rounded-lg border border-border-default m-3 p-4">
                       <PomodoroTimer
                         isOwner={isOwner}
+                        canControlRoom={canControlRoom}
                         currentUserId={currentUser?.id || currentUser?.displayName || ''}
                         focusMicLockEnabled={roomData.focusMicLockEnabled}
                         focusChatLockEnabled={roomData.focusChatLockEnabled}
@@ -722,9 +910,9 @@ export default function RoomPage({ params }: { params: { id: string } }) {
                       <div className="my-auto h-[60%] min-h-[300px]">
                         <ChatSidebar
                           roomId={roomData.id}
-                          chatDisabled={Boolean(roomData.chatDisabled && !isOwner)}
+                          chatDisabled={Boolean(roomData.chatDisabled && !canControlRoom)}
                           welcomeMessageText={roomData.welcomeMessageText}
-                          isFocusChatLocked={Boolean(isFocusChatLocked && !isOwner)}
+                          isFocusChatLocked={Boolean(isFocusChatLocked && !canControlRoom)}
                           focusChatLockEnabled={roomData.focusChatLockEnabled}
                           systemBubbles={systemBubbles}
                         />
@@ -742,6 +930,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
                       currentUserId={currentUser?.displayName ?? ''}
                       currentUserIdStr={currentUser?.id || ''}
                       isOwner={isOwner}
+                      canControlRoom={canControlRoom}
                       roomData={roomData}
                       onUpdateRoom={(updated) => setRoomData(prev => prev ? { ...prev, ...updated } : null)}
                     />

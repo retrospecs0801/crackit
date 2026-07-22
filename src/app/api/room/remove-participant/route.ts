@@ -18,15 +18,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized. Please sign in.' }, { status: 401 });
     }
 
-    // Verify against Supabase that the caller is the true owner of the room
+    // Verify against Supabase that the caller is the true owner or co-owner of the room
     const { data: dbRoom, error: dbError } = await supabase
       .from('rooms')
-      .select('owner_id')
+      .select('*')
       .eq('id', roomName)
       .maybeSingle();
 
-    if (dbError || !dbRoom || dbRoom.owner_id !== user.id) {
-      return NextResponse.json({ error: 'Only the room owner can remove participants' }, { status: 403 });
+    if (dbError || !dbRoom) {
+      return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     }
 
     const livekitUrl = process.env.LIVEKIT_URL || process.env.NEXT_PUBLIC_LIVEKIT_URL;
@@ -39,6 +39,37 @@ export async function POST(req: NextRequest) {
 
     const serverUrl = livekitUrl.replace('wss://', 'https://').replace('ws://', 'http://');
     const svc = new RoomServiceClient(serverUrl, apiKey, apiSecret);
+
+    const isDbOwner = dbRoom.owner_id === user.id;
+    const isDbCoOwner = Array.isArray(dbRoom.co_owners) && (
+      dbRoom.co_owners.includes(user.id) ||
+      dbRoom.co_owners.includes(user.user_metadata?.display_name || '') ||
+      dbRoom.co_owners.includes(user.user_metadata?.full_name || '') ||
+      dbRoom.co_owners.includes(user.email || '')
+    );
+
+    if (!isDbOwner && !isDbCoOwner) {
+      return NextResponse.json({ error: 'Only the room owner or co-owner can remove participants' }, { status: 403 });
+    }
+
+    // Check moderation hierarchy
+    const isTargetOwner = identity === dbRoom.owner_id;
+    if (isTargetOwner) {
+      return NextResponse.json({ error: 'Cannot remove the room owner.' }, { status: 403 });
+    }
+
+    const isTargetCoOwner = Array.isArray(dbRoom.co_owners) && (
+      dbRoom.co_owners.includes(identity) ||
+      dbRoom.co_owners.some((co: string) => co.toLowerCase() === identity.toLowerCase())
+    );
+
+    if (isTargetCoOwner && !isDbOwner) {
+      return NextResponse.json({ error: 'Co-owners cannot remove other co-owners or the owner.' }, { status: 403 });
+    }
+
+    if (isTargetCoOwner && isDbOwner) {
+      return NextResponse.json({ error: 'Please remove co-owner role before kicking.' }, { status: 403 });
+    }
 
     await svc.removeParticipant(roomName, identity);
 

@@ -26,10 +26,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Verify room exists and caller is owner
+    // Verify room exists and check caller permissions
     const { data: dbRoom, error: fetchError } = await supabase
       .from('rooms')
-      .select('owner_id')
+      .select('*')
       .eq('id', roomDetails.id)
       .single();
 
@@ -37,14 +37,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     }
 
-    if (dbRoom.owner_id !== user.id) {
-      return NextResponse.json({ error: 'Only the room owner can modify settings' }, { status: 403 });
+    let hasPermission = false;
+    if (dbRoom.owner_id === user.id) hasPermission = true;
+    if (Array.isArray(dbRoom.co_owners) && (
+      dbRoom.co_owners.includes(user.id) ||
+      dbRoom.co_owners.includes(user.user_metadata?.display_name || '') ||
+      dbRoom.co_owners.includes(user.user_metadata?.full_name || '') ||
+      dbRoom.co_owners.includes(user.email || '')
+    )) {
+      hasPermission = true;
+    }
+
+    if (!hasPermission) {
+      return NextResponse.json({ error: 'Only the room owner or co-owner can modify settings' }, { status: 403 });
     }
 
     const fullRoomDetails: Room = {
       ...roomDetails,
-      owner_id: user.id,
-      ownerId: user.id,
+      owner_id: dbRoom.owner_id || user.id,
+      ownerId: dbRoom.owner_id || user.id,
       maxStudents: roomDetails.maxStudents || 6,
       maxParticipants: roomDetails.maxParticipants ?? roomDetails.maxStudents ?? 6,
       camMandatory: roomDetails.camMandatory || false,

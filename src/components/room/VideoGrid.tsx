@@ -9,26 +9,38 @@ import {
   VideoTrack,
 } from '@livekit/components-react';
 import { Track } from 'livekit-client';
+import { Crown, ShieldCheck } from 'lucide-react';
 import { ParticipantMenu } from '@/components/room/ParticipantMenu';
 import { Avatar } from '@/components/ui/Avatar';
+import { RoomRoleState } from '@/types';
 
 interface VideoGridProps {
   currentUserId?: string | null;
   roomName?: string;
   isRoomOwner?: boolean;
+  isCoOwner?: boolean;
+  canControlRoom?: boolean;
   ownerId?: string | null;
+  roomRoles?: RoomRoleState;
+  onUpdateRoles?: (updater: (prev: RoomRoleState) => RoomRoleState) => void;
 }
 
 function InteractiveParticipantTile({
   currentUserId,
   roomName,
   isRoomOwner,
+  isCoOwner,
   ownerId = null,
+  roomRoles,
+  onUpdateRoles,
 }: {
   currentUserId: string | null;
   roomName?: string;
   isRoomOwner: boolean;
+  isCoOwner?: boolean;
   ownerId?: string | null;
+  roomRoles?: RoomRoleState;
+  onUpdateRoles?: (updater: (prev: RoomRoleState) => RoomRoleState) => void;
 }) {
   const trackRef = useMaybeTrackRefContext();
   const pContext = useMaybeParticipantContext();
@@ -62,7 +74,8 @@ function InteractiveParticipantTile({
   // If this is a normal camera tile and camera is off, show the profile card.
   // If this is a screen share tile, DO NOT show the profile card even if camera is off, because screen share is visible.
   const isCameraOff = !participant.isCameraEnabled && !isScreenShareTile;
-  const isTileOwner = identity === ownerId || (parsedUserId !== null && parsedUserId === ownerId);
+  const isTileOwner = Boolean((roomRoles?.owner && (displayName === roomRoles.owner || identity === roomRoles.owner)) || identity === ownerId || (parsedUserId !== null && parsedUserId === ownerId));
+  const isTileCoOwner = Boolean(!isTileOwner && roomRoles && Array.isArray(roomRoles.coOwners) && (roomRoles.coOwners.includes(displayName) || roomRoles.coOwners.includes(identity) || (parsedUserId !== null && roomRoles.coOwners.includes(parsedUserId))));
 
   // Check if camera track exists for PiP when showing screen share
   const cameraPub = participant.getTrackPublication(Track.Source.Camera);
@@ -70,8 +83,9 @@ function InteractiveParticipantTile({
 
   return (
     <div
-      className={`relative w-full h-full rounded-xl overflow-hidden border bg-surface shadow-sm transition-all ${isTileOwner ? 'border-[#F59E0B]/80 shadow-[0_0_12px_rgba(245,158,11,0.3)]' : 'border-border-default'
-        }`}
+      className={`relative w-full h-full rounded-xl overflow-hidden border bg-surface shadow-sm transition-all ${
+        isTileOwner ? 'border-[#F59E0B]/80 shadow-[0_0_12px_rgba(245,158,11,0.3)]' : isTileCoOwner ? 'border-[#3B82F6]/80 shadow-[0_0_12px_rgba(59,130,246,0.3)]' : 'border-border-default'
+      }`}
       onClick={() => {
         if (!participant.isLocal) {
           setShowMenu(!showMenu);
@@ -110,7 +124,16 @@ function InteractiveParticipantTile({
       {/* Room Owner badge for active video or tile header */}
       {isTileOwner && !isScreenShareTile && (
         <div className="absolute top-2.5 right-2.5 z-20 px-2.5 py-0.5 rounded-full bg-[#F59E0B] text-black font-sans font-bold text-[10px] flex items-center gap-1 shadow-lg tracking-wide">
-          <span>Room Owner</span>
+          <Crown size={11} strokeWidth={2.5} />
+          <span>Owner</span>
+        </div>
+      )}
+
+      {/* Co-Owner badge for active video or tile header */}
+      {isTileCoOwner && !isScreenShareTile && (
+        <div className="absolute top-2.5 right-2.5 z-20 px-2.5 py-0.5 rounded-full bg-[#3B82F6] text-white font-sans font-bold text-[10px] flex items-center gap-1 shadow-lg tracking-wide">
+          <ShieldCheck size={11} strokeWidth={2.5} />
+          <span>Co-Owner</span>
         </div>
       )}
 
@@ -123,8 +146,9 @@ function InteractiveParticipantTile({
               avatarUrl={avatarUrl}
               avatarColor={avatarColor}
               avatarInitials={avatarInitials}
-              sizeClassName={`w-20 h-20 text-2xl shadow-xl border-2 ${isTileOwner ? 'border-[#F59E0B] shadow-[0_0_16px_rgba(245,158,11,0.5)]' : 'border-border-default'
-                }`}
+              sizeClassName={`w-20 h-20 text-2xl shadow-xl border-2 ${
+                isTileOwner ? 'border-[#F59E0B] shadow-[0_0_16px_rgba(245,158,11,0.5)]' : isTileCoOwner ? 'border-[#3B82F6] shadow-[0_0_16px_rgba(59,130,246,0.5)]' : 'border-border-default'
+              }`}
             />
             {participant.isSpeaking && (
               <span className="absolute bottom-0.5 right-0.5 w-4 h-4 rounded-full bg-accent-green border-2 border-surface animate-pulse" />
@@ -135,7 +159,7 @@ function InteractiveParticipantTile({
               <span>{displayName}</span>
             </span>
             <span className="font-mono text-[10px] text-text-secondary">
-              {isTileOwner ? 'Room Owner • Camera Off' : 'Camera Off'}
+              {isTileOwner ? 'Owner • Camera Off' : isTileCoOwner ? 'Co-Owner • Camera Off' : 'Camera Off'}
             </span>
           </div>
         </div>
@@ -154,6 +178,9 @@ function InteractiveParticipantTile({
             targetAvatarColor={avatarColor}
             roomName={roomName}
             isRoomOwner={isRoomOwner}
+            isCoOwner={isCoOwner}
+            roomRoles={roomRoles}
+            onUpdateRoles={onUpdateRoles}
             onClose={() => setShowMenu(false)}
           />
         </div>
@@ -166,7 +193,11 @@ export default function VideoGrid({
   currentUserId = null,
   roomName,
   isRoomOwner = false,
+  isCoOwner = false,
+  canControlRoom = false,
   ownerId = null,
+  roomRoles,
+  onUpdateRoles,
 }: VideoGridProps) {
   const tracks = useTracks(
     [
@@ -199,7 +230,10 @@ export default function VideoGrid({
           currentUserId={currentUserId}
           roomName={roomName}
           isRoomOwner={isRoomOwner}
+          isCoOwner={isCoOwner}
           ownerId={ownerId}
+          roomRoles={roomRoles}
+          onUpdateRoles={onUpdateRoles}
         />
       </GridLayout>
     </div>
