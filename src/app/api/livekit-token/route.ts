@@ -1,21 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const roomName = searchParams.get('roomName')
-  const participantName = searchParams.get('participantName')
-  const userId = searchParams.get('userId') || participantName
-  const avatarUrl = searchParams.get('avatarUrl') || null
-  const avatarColor = searchParams.get('avatarColor') || undefined
-  const avatarInitials = searchParams.get('avatarInitials') || undefined
+  const requestedUserId = searchParams.get('userId') || searchParams.get('participantName')
 
-  if (!roomName || !participantName) {
+  if (!roomName) {
     return NextResponse.json(
-      { error: 'roomName and participantName are required' },
+      { error: 'roomName is required' },
       { status: 400 }
     )
   }
+
+  const supabase = createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    return NextResponse.json(
+      { error: 'Unauthorized. Please sign in to join study rooms.' },
+      { status: 401 }
+    )
+  }
+
+  // Prevent identity spoofing
+  if (requestedUserId && requestedUserId !== user.id) {
+    return NextResponse.json(
+      { error: 'Forbidden. You cannot join a room as another user.' },
+      { status: 403 }
+    )
+  }
+
+  const userId = user.id
+  const supabaseAdmin = createAdminClient()
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .maybeSingle()
+
+  const participantName = profile?.display_name || user.user_metadata?.full_name || searchParams.get('participantName') || 'Student'
+  const avatarUrl = profile?.avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture || searchParams.get('avatarUrl') || null
+  const avatarColor = profile?.avatar_color || searchParams.get('avatarColor') || '#5C7A5A'
+  const avatarInitials = profile?.avatar_initials || participantName.substring(0, 2).toUpperCase()
 
   const apiKey = process.env.LIVEKIT_API_KEY
   const apiSecret = process.env.LIVEKIT_API_SECRET
@@ -56,11 +84,11 @@ export async function GET(req: NextRequest) {
   }
 
   const token = new AccessToken(apiKey, apiSecret, {
-    identity: userId!,
+    identity: userId,
     name: participantName,
     metadata: JSON.stringify({
       displayName: participantName,
-      userId: userId!,
+      userId: userId,
       avatarUrl,
       avatarColor,
       avatarInitials,

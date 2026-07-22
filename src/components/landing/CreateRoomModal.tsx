@@ -256,7 +256,7 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
                   {num} {num === 1 ? 'Participant' : 'Participants'}
                 </option>
               ))}
-              <option value={20}>20 (Unlimited)</option>
+              <option value={20}> Unlimited </option>
             </select>
           </div>
 

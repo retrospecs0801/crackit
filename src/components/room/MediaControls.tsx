@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { useTrackToggle, useLocalParticipant } from '@livekit/components-react'
 import { Track } from 'livekit-client'
 import { Share, Check, Mic, MicOff, Video, VideoOff, Monitor } from 'lucide-react'
@@ -68,21 +68,9 @@ export default function MediaControls({
     }
   }, [micDisabled, isFocusMicLocked, micEnabled, micProps]);
 
-  const prevIsFocusLockedRef = useRef(isFocusMicLocked);
-  const prevForceUnmuteTriggerRef = useRef(forceUnmuteTrigger);
-
-  // Auto-unmute when focus lock disengages or reset is triggered
-  useEffect(() => {
-    const focusUnlocked = prevIsFocusLockedRef.current === true && !isFocusMicLocked;
-    const resetTriggered = forceUnmuteTrigger !== undefined && forceUnmuteTrigger !== prevForceUnmuteTriggerRef.current && prevForceUnmuteTriggerRef.current !== undefined;
-    prevIsFocusLockedRef.current = isFocusMicLocked;
-    prevForceUnmuteTriggerRef.current = forceUnmuteTrigger;
-
-    if ((focusUnlocked || resetTriggered) && !micDisabled && !micEnabled && micProps.onClick) {
-      const mockEvent = { preventDefault: () => {} } as React.MouseEvent<HTMLButtonElement>;
-      micProps.onClick(mockEvent);
-    }
-  }, [isFocusMicLocked, forceUnmuteTrigger, micDisabled, micEnabled, micProps]);
+  // When mic gets disabled by focus lock or host settings, auto-mute.
+  // When re-enabled, only the button becomes enabled (`disabled={false}` below);
+  // the mic stays muted (off by default) until the user manually toggles it on.
 
   // Auto-disable video if host locks camera
   useEffect(() => {

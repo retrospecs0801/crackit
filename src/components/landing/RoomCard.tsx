@@ -13,9 +13,9 @@ export function RoomCard({ room }: { room: Room }) {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
-  
-  const displayMembers = room.members.slice(0, 4);
-  const extraMembers = room.members.length - 4;
+
+  const displayMembers = room.members.slice(0, 6);
+  const extraMembers = room.members.length - 6;
 
   const maxCapacity = room.maxParticipants ?? room.maxStudents ?? 6;
   const isUnlimited = maxCapacity >= 20;
@@ -58,17 +58,48 @@ export function RoomCard({ room }: { room: Room }) {
   const isCustomExam = room.examTag === 'custom' || room.examTag === 'Custom' || room.examType === 'custom';
   const examBadgeText = isCustomExam ? (room.customExamLabel || 'Custom Exam') : room.examTag;
 
+  const memberCount = displayMembers.length;
+  let avatarSizeClass = "w-[36px] h-[36px] text-[13px]";
+  let extraSizeClass = "w-[36px] h-[36px] text-[13px]";
+  let overlapMargin = "-ml-[12px]";
+
+  if (memberCount <= 1) {
+    avatarSizeClass = "w-[78px] h-[78px] text-[28px]";
+    extraSizeClass = "w-[78px] h-[78px] text-[28px]";
+    overlapMargin = "-ml-[24px]";
+  } else if (memberCount === 2) {
+    avatarSizeClass = "w-[66px] h-[66px] text-[24px]";
+    extraSizeClass = "w-[66px] h-[66px] text-[24px]";
+    overlapMargin = "-ml-[20px]";
+  } else if (memberCount === 3) {
+    avatarSizeClass = "w-[56px] h-[56px] text-[20px]";
+    extraSizeClass = "w-[56px] h-[56px] text-[20px]";
+    overlapMargin = "-ml-[18px]";
+  } else if (memberCount === 4) {
+    avatarSizeClass = "w-[48px] h-[48px] text-[17px]";
+    extraSizeClass = "w-[48px] h-[48px] text-[17px]";
+    overlapMargin = "-ml-[16px]";
+  } else if (memberCount === 5) {
+    avatarSizeClass = "w-[42px] h-[42px] text-[15px]";
+    extraSizeClass = "w-[42px] h-[42px] text-[15px]";
+    overlapMargin = "-ml-[14px]";
+  } else {
+    avatarSizeClass = "w-[36px] h-[36px] text-[13px]";
+    extraSizeClass = "w-[36px] h-[36px] text-[13px]";
+    overlapMargin = "-ml-[12px]";
+  }
+
   return (
     <>
-      <div 
+      <div
         className="rounded-xl p-4 flex flex-col gap-3 transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)] hover:-translate-y-[3px] border shadow-sm hover:shadow-hover"
         style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}
       >
-        
+
         {/* Header with Exam Badge & Title */}
         <div className="flex flex-col gap-2">
           <div className="flex justify-between items-center gap-2">
-            <span 
+            <span
               className="font-mono text-[11px] font-semibold rounded-full px-2.5 py-0.5 border border-border-default bg-surface-raised text-accent-green inline-block w-fit shadow-xs truncate max-w-[200px]"
             >
               {examBadgeText}
@@ -107,43 +138,46 @@ export function RoomCard({ room }: { room: Room }) {
           )}
         </div>
 
-        {/* Footer */}
-        <div className="pt-[12px] mt-1 flex justify-between items-center">
-          <div className="flex items-center">
+        {/* Middle Profiles Section */}
+        {room.members.length > 0 && (
+          <div className="py-1 flex items-center justify-center my-auto">
             {displayMembers.map((member, index) => (
               <div
                 key={member.id}
                 style={{ zIndex: 10 - index }}
-                className={index > 0 ? '-ml-[6px]' : ''}
+                className={index > 0 ? overlapMargin : ''}
               >
                 <Avatar
                   name={member.displayName}
                   avatarUrl={member.avatarUrl}
                   avatarInitials={member.avatarInitials}
                   avatarColor={member.avatarColor}
-                  sizeClassName="w-[26px] h-[26px] text-[10px]"
-                  className="border-[2px] border-surface-raised"
+                  sizeClassName={avatarSizeClass}
+                  className="border-[2px] border-surface-raised shadow-xs"
                 />
               </div>
             ))}
             {extraMembers > 0 && (
               <div
-                className="w-[26px] h-[26px] rounded-full flex items-center justify-center font-sans font-semibold text-[10px] text-surface-raised bg-text-primary shrink-0 -ml-[6px] border-[2px] border-surface-raised z-0"
+                style={{ zIndex: 0 }}
+                className={`${extraSizeClass} rounded-full flex items-center justify-center font-sans font-semibold text-surface-raised bg-text-primary shrink-0 ${overlapMargin} border-[2px] border-surface-raised shadow-xs`}
               >
                 +{extraMembers}
               </div>
             )}
           </div>
-          
+        )}
+
+        {/* Footer */}
+        <div className="pt-2 mt-auto flex justify-end items-center">
           <div className="flex flex-col items-end gap-1">
             <button
               onClick={handleJoin}
               disabled={room.isMock || isJoining || isFull}
-              className={`border rounded-[7px] font-sans font-semibold text-[12px] px-[14px] py-[6px] transition-colors duration-200 flex items-center justify-center ${
-                room.isMock || isJoining || isFull
+              className={`border rounded-[7px] font-sans font-semibold text-[12px] px-[14px] py-[6px] transition-colors duration-200 flex items-center justify-center ${room.isMock || isJoining || isFull
                   ? 'opacity-70 cursor-not-allowed'
                   : 'bg-transparent border-border-default text-text-primary hover:bg-text-primary hover:text-surface-raised hover:border-text-primary'
-              }`}
+                }`}
               style={room.isMock ? { backgroundColor: 'transparent', borderColor: 'var(--btn-demo-border)', color: 'var(--btn-demo-text)' } : {}}
             >
               {isJoining ? (
@@ -164,7 +198,7 @@ export function RoomCard({ room }: { room: Room }) {
             )}
           </div>
         </div>
-        
+
       </div>
 
       <GoogleSignInModal

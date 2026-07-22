@@ -92,6 +92,7 @@ export type Room = {
   chatDisabled?: boolean;
   focusMicLockEnabled?: boolean;
   focusChatLockEnabled?: boolean;
+  lastEmptyAt?: string | null;
 };
 
 export type Message = {

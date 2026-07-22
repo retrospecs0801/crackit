@@ -66,12 +66,23 @@ export function ProfileEditForm({
     try {
       const supabase = createClient();
 
-      const { data: duplicate } = await supabase
-        .from('profiles')
-        .select('id')
-        .ilike('display_name', displayName.trim())
-        .neq('id', profile.id)
-        .maybeSingle();
+      let duplicate = false;
+      const { data: isAvailable, error: rpcError } = await supabase.rpc('check_display_name_available', {
+        check_name: displayName.trim(),
+        exclude_user_id: profile.id,
+      });
+
+      if (!rpcError && typeof isAvailable === 'boolean') {
+        duplicate = !isAvailable;
+      } else {
+        const { data: dupData } = await supabase
+          .from('profiles')
+          .select('id')
+          .ilike('display_name', displayName.trim())
+          .neq('id', profile.id)
+          .maybeSingle();
+        duplicate = !!dupData;
+      }
 
       if (duplicate) {
         setError('This display name is already taken by another student. Please choose a unique display name.');

@@ -3,6 +3,13 @@ import { RoomServiceClient } from 'livekit-server-sdk';
 import { Room, User, ExamTag } from '@/types';
 import { createAdminClient } from '@/lib/supabase/server';
 
+// ============================================================================
+// CONFIGURATION: Set the time (in milliseconds) before an empty room is deleted
+// Example: 5 * 60 * 1000 = 5 minutes. Change this value if you want a different timeout.
+// Note: Keep this in sync with ROOM_EMPTY_TIMEOUT_SECONDS in src/app/api/rooms/create/route.ts
+// ============================================================================
+const ROOM_EMPTY_TIMEOUT_MS = 5 * 60 * 1000;
+
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
@@ -51,13 +58,41 @@ export async function GET() {
       const createdTime = new Date(dbRoom.created_at || 0).getTime();
       const ageMs = now - createdTime;
 
-      console.log(`[Room Cleanup Check] Room ID: "${dbRoom.id}", Age: ${(ageMs / 60000).toFixed(2)} min, LiveKit Participants: ${numParticipants}`);
+      // Check when the room last became empty or active
+      let lastEmptyAt: string | null = dbRoom.last_empty_at ?? null;
 
-      // Backup safety net cleanup: delete rows older than 5 minutes that have 0 participants
-      if (ageMs > 5 * 60 * 1000 && numParticipants === 0) {
-        console.log(`[Room Cleanup Action] Deleting empty room older than 5 min: "${dbRoom.id}"`);
-        staleIds.push(dbRoom.id);
-        continue;
+      if (numParticipants > 0) {
+        console.log(`[Room Active Check] Room ID: "${dbRoom.id}", Participants: ${numParticipants}`);
+        // Room is currently occupied. If last_empty_at is set, reset/clear it in DB.
+        if (lastEmptyAt !== null) {
+          lastEmptyAt = null;
+          supabaseAdmin.from('rooms').update({ last_empty_at: null }).eq('id', dbRoom.id).then();
+        }
+      } else {
+        // Room currently has 0 participants.
+        if (lastEmptyAt === null) {
+          // Room just became empty! Start the empty countdown from right now.
+          lastEmptyAt = new Date().toISOString();
+          supabaseAdmin.from('rooms').update({ last_empty_at: lastEmptyAt }).eq('id', dbRoom.id).then();
+          console.log(`[Room Cleanup Check] Room ID: "${dbRoom.id}" just became empty. Started countdown from now.`);
+        } else {
+          // Room was already empty. Check how long it has been continuously empty.
+          const emptyDurationMs = now - new Date(lastEmptyAt).getTime();
+          console.log(`[Room Cleanup Check] Room ID: "${dbRoom.id}", Empty Duration: ${(emptyDurationMs / 60000).toFixed(2)} min, LiveKit Participants: 0`);
+
+          // If the room has been continuously empty for longer than ROOM_EMPTY_TIMEOUT_MS, delete it.
+          if (emptyDurationMs > ROOM_EMPTY_TIMEOUT_MS) {
+            console.log(`[Room Cleanup Action] Deleting empty room that has been empty > ${(ROOM_EMPTY_TIMEOUT_MS / 60000).toFixed(1)} min: "${dbRoom.id}"`);
+            staleIds.push(dbRoom.id);
+            // Also explicitly delete room from LiveKit if it's still open on LiveKit server
+            try {
+              await svc.deleteRoom(dbRoom.id);
+            } catch (lkDelErr) {
+              // Room might already be closed/finished on LiveKit side
+            }
+            continue;
+          }
+        }
       }
 
       let parsedMeta: Record<string, unknown> | undefined = undefined;
@@ -125,6 +160,7 @@ export async function GET() {
         chatDisabled: dbRoom.chat_disabled,
         focusMicLockEnabled: Boolean(dbRoom.focus_mic_lock_enabled ?? parsedMeta?.focusMicLockEnabled ?? true),
         focusChatLockEnabled: Boolean(dbRoom.focus_chat_lock_enabled ?? parsedMeta?.focusChatLockEnabled ?? true),
+        lastEmptyAt,
       };
 
       activeRooms.push(roomObj);

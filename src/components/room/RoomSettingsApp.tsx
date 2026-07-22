@@ -15,13 +15,13 @@ export function RoomSettingsApp({ roomData, onUpdateRoom }: RoomSettingsAppProps
   const [welcomeEnabled, setWelcomeEnabled] = useState(roomData.welcomeMessageEnabled || false);
   const [welcomeText, setWelcomeText] = useState(roomData.welcomeMessageText || '');
   const [camMandatory, setCamMandatory] = useState(roomData.camMandatory || false);
-  
+
   const [micDisabled, setMicDisabled] = useState(roomData.micDisabled || false);
   const [cameraDisabled, setCameraDisabled] = useState(roomData.cameraDisabled || false);
   const [chatDisabled, setChatDisabled] = useState(roomData.chatDisabled || false);
   const [focusMicLockEnabled, setFocusMicLockEnabled] = useState(roomData.focusMicLockEnabled ?? true);
   const [focusChatLockEnabled, setFocusChatLockEnabled] = useState(roomData.focusChatLockEnabled ?? true);
-  
+
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +65,7 @@ export function RoomSettingsApp({ roomData, onUpdateRoom }: RoomSettingsAppProps
       }
 
       const data = await res.json();
-      
+
       // Update local state
       onUpdateRoom(data.room);
 
@@ -98,11 +98,11 @@ export function RoomSettingsApp({ roomData, onUpdateRoom }: RoomSettingsAppProps
   return (
     <form onSubmit={handleSave} className="flex flex-col gap-4">
       <h2 className="font-sans text-[14px] text-text-primary font-bold">Room Settings</h2>
-      
+
       <div>
         <label className={labelStyles}>Room Title</label>
-        <input 
-          type="text" 
+        <input
+          type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           className={inputStyles}
@@ -119,7 +119,7 @@ export function RoomSettingsApp({ roomData, onUpdateRoom }: RoomSettingsAppProps
 
       <div>
         <label className={labelStyles}>Max Participants</label>
-        <select 
+        <select
           value={maxParticipants}
           onChange={(e) => setMaxParticipants(Number(e.target.value))}
           className={inputStyles}
@@ -129,7 +129,7 @@ export function RoomSettingsApp({ roomData, onUpdateRoom }: RoomSettingsAppProps
               {num} {num === 1 ? 'Participant' : 'Participants'}
             </option>
           ))}
-          <option value={20}>20 (Unlimited)</option>
+          <option value={20}>Unlimited </option>
         </select>
       </div>
 
@@ -146,14 +146,12 @@ export function RoomSettingsApp({ roomData, onUpdateRoom }: RoomSettingsAppProps
               e.stopPropagation();
               setCamMandatory(!camMandatory);
             }}
-            className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 focus:outline-none ${
-              camMandatory ? 'bg-accent-green' : 'bg-border-default'
-            }`}
+            className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 focus:outline-none ${camMandatory ? 'bg-accent-green' : 'bg-border-default'
+              }`}
           >
             <div
-              className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
-                camMandatory ? 'translate-x-4' : 'translate-x-0'
-              }`}
+              className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${camMandatory ? 'translate-x-4' : 'translate-x-0'
+                }`}
             />
           </button>
         </div>
@@ -172,14 +170,12 @@ export function RoomSettingsApp({ roomData, onUpdateRoom }: RoomSettingsAppProps
               e.stopPropagation();
               setWelcomeEnabled(!welcomeEnabled);
             }}
-            className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 focus:outline-none ${
-              welcomeEnabled ? 'bg-accent-green' : 'bg-border-default'
-            }`}
+            className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 focus:outline-none ${welcomeEnabled ? 'bg-accent-green' : 'bg-border-default'
+              }`}
           >
             <div
-              className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
-                welcomeEnabled ? 'translate-x-4' : 'translate-x-0'
-              }`}
+              className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${welcomeEnabled ? 'translate-x-4' : 'translate-x-0'
+                }`}
             />
           </button>
         </div>
@@ -207,14 +203,13 @@ export function RoomSettingsApp({ roomData, onUpdateRoom }: RoomSettingsAppProps
         <div className="flex items-center justify-between">
           <div className="flex flex-col">
             <span className="font-sans text-[12px] text-text-primary">Disable Microphones</span>
-            
+
           </div>
           <button
             type="button"
             onClick={() => setMicDisabled(!micDisabled)}
-            className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 ${
-              micDisabled ? 'bg-accent-green' : 'bg-border-default'
-            }`}
+            className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 ${micDisabled ? 'bg-accent-green' : 'bg-border-default'
+              }`}
           >
             <div className={`bg-white w-4 h-4 rounded-full shadow transform transition-transform ${micDisabled ? 'translate-x-4' : 'translate-x-0'}`} />
           </button>
@@ -224,14 +219,13 @@ export function RoomSettingsApp({ roomData, onUpdateRoom }: RoomSettingsAppProps
         <div className="flex items-center justify-between">
           <div className="flex flex-col">
             <span className="font-sans text-[12px] text-text-primary">Disable Cameras</span>
-           
+
           </div>
           <button
             type="button"
             onClick={() => setCameraDisabled(!cameraDisabled)}
-            className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 ${
-              cameraDisabled ? 'bg-accent-green' : 'bg-border-default'
-            }`}
+            className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 ${cameraDisabled ? 'bg-accent-green' : 'bg-border-default'
+              }`}
           >
             <div className={`bg-white w-4 h-4 rounded-full shadow transform transition-transform ${cameraDisabled ? 'translate-x-4' : 'translate-x-0'}`} />
           </button>
@@ -241,14 +235,13 @@ export function RoomSettingsApp({ roomData, onUpdateRoom }: RoomSettingsAppProps
         <div className="flex items-center justify-between">
           <div className="flex flex-col">
             <span className="font-sans text-[12px] text-text-primary">Disable Text Chat</span>
-          
+
           </div>
           <button
             type="button"
             onClick={() => setChatDisabled(!chatDisabled)}
-            className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 ${
-              chatDisabled ? 'bg-accent-green' : 'bg-border-default'
-            }`}
+            className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 ${chatDisabled ? 'bg-accent-green' : 'bg-border-default'
+              }`}
           >
             <div className={`bg-white w-4 h-4 rounded-full shadow transform transition-transform ${chatDisabled ? 'translate-x-4' : 'translate-x-0'}`} />
           </button>
@@ -262,9 +255,8 @@ export function RoomSettingsApp({ roomData, onUpdateRoom }: RoomSettingsAppProps
           <button
             type="button"
             onClick={() => setFocusMicLockEnabled(!focusMicLockEnabled)}
-            className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 ${
-              focusMicLockEnabled ? 'bg-accent-green' : 'bg-border-default'
-            }`}
+            className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 ${focusMicLockEnabled ? 'bg-accent-green' : 'bg-border-default'
+              }`}
           >
             <div className={`bg-white w-4 h-4 rounded-full shadow transform transition-transform ${focusMicLockEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
           </button>
@@ -277,9 +269,8 @@ export function RoomSettingsApp({ roomData, onUpdateRoom }: RoomSettingsAppProps
           <button
             type="button"
             onClick={() => setFocusChatLockEnabled(!focusChatLockEnabled)}
-            className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 ${
-              focusChatLockEnabled ? 'bg-accent-green' : 'bg-border-default'
-            }`}
+            className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 ${focusChatLockEnabled ? 'bg-accent-green' : 'bg-border-default'
+              }`}
           >
             <div className={`bg-white w-4 h-4 rounded-full shadow transform transition-transform ${focusChatLockEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
           </button>

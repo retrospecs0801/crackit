@@ -13,7 +13,7 @@ import { AppsTray } from '@/components/room/AppsTray';
 import VideoGrid from '@/components/room/VideoGrid';
 import MediaControls from '@/components/room/MediaControls';
 import { RoomParticipantSidebar } from '@/components/room/RoomParticipantSidebar';
-import { EyeOff, LayoutGrid, Loader2, ShieldAlert } from 'lucide-react';
+import { EyeOff, LayoutGrid, Loader2, ShieldAlert, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useConnectionState, useDataChannel, useRoomContext } from '@livekit/components-react';
 import { mockRooms } from '@/lib/mockData';
 import { WelcomeModal } from '@/components/room/WelcomeModal';
@@ -111,6 +111,44 @@ export default function RoomPage({ params }: { params: { id: string } }) {
   const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showVideoGrid, setShowVideoGrid] = useState(true);
+
+  const [sidebarWidth, setSidebarWidth] = useState(300);
+  const [isResizing, setIsResizing] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [lastExpandedWidth, setLastExpandedWidth] = useState(300);
+
+  const startResizing = useCallback((mouseDownEvent: React.MouseEvent) => {
+    mouseDownEvent.preventDefault();
+    setIsResizing(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const newWidth = window.innerWidth - e.clientX;
+      if (newWidth < 120) {
+        setIsCollapsed(true);
+        setSidebarWidth(0);
+      } else {
+        setIsCollapsed(false);
+        const constrainedWidth = Math.min(Math.max(newWidth, 200), 600);
+        setSidebarWidth(constrainedWidth);
+        setLastExpandedWidth(constrainedWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [roomData, setRoomData] = useState<Room | null>(null);
@@ -588,13 +626,57 @@ export default function RoomPage({ params }: { params: { id: string } }) {
                 </div>
               </div>
 
+              {/* Resize Handle (placed outside sidebar so it stays visible/draggable when collapsed) */}
+              <div
+                onMouseDown={startResizing}
+                className={`
+                  hidden md:flex absolute top-0 bottom-0 w-2 cursor-col-resize z-50
+                  items-center justify-center hover:bg-accent-green/30 group transition-all duration-150
+                  ${isResizing ? 'bg-accent-green/40' : ''}
+                `}
+                style={{
+                  right: isCollapsed ? '-4px' : `${sidebarWidth - 4}px`,
+                }}
+              >
+                {/* Vertical indicator line */}
+                <div className={`w-[2px] h-16 rounded bg-border-default group-hover:bg-accent-green transition-colors duration-150 ${isResizing ? 'bg-accent-green' : ''}`} />
+                
+                {/* Expand / Collapse toggle button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (isCollapsed) {
+                      setIsCollapsed(false);
+                      setSidebarWidth(lastExpandedWidth);
+                    } else {
+                      setIsCollapsed(true);
+                      setSidebarWidth(0);
+                    }
+                  }}
+                  className="absolute left-1/2 -translate-x-1/2 w-5 h-8 bg-surface-raised border border-border-default hover:border-accent-green hover:text-accent-green rounded-md shadow-md flex items-center justify-center transition-all cursor-pointer opacity-100 md:opacity-0 group-hover:opacity-100 focus:opacity-100 z-50"
+                  title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+                >
+                  {isCollapsed ? (
+                    <ChevronLeft size={12} className="text-text-primary group-hover:text-accent-green" />
+                  ) : (
+                    <ChevronRight size={12} className="text-text-primary group-hover:text-accent-green" />
+                  )}
+                </button>
+              </div>
+
               {/* Sidebar */}
               <div
                 className={`
-                  fixed inset-0 z-40 top-[52px] flex flex-col md:static md:w-[300px] md:min-w-[300px] md:z-0
+                  fixed inset-0 z-40 top-[52px] flex flex-col md:static md:z-0
                   transition-transform duration-300 bg-surface border-l border-border-default
                   ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
+                  ${isCollapsed ? 'md:border-l-0 overflow-hidden' : ''}
                 `}
+                style={{
+                  width: 'var(--sidebar-width)',
+                  minWidth: 'var(--sidebar-width)',
+                  '--sidebar-width': isCollapsed ? '0px' : `${sidebarWidth}px`,
+                } as any}
               >
                 {/* Tab Bar */}
                 <div className="flex w-full shrink-0 px-2 py-1 h-[44px] border-b border-border-default bg-surface">

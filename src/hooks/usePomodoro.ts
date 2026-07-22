@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { playTimerCompletionSound } from '@/lib/soundEffects';
 
 type Phase = 'FOCUS' | 'BREAK';
 
@@ -74,7 +75,8 @@ export function usePomodoro(config: PomodoroConfig) {
         setTimeLeft((prev) => prev - 1);
       }, 1000);
     } else if (isRunning && timeLeft === 0) {
-      // Auto-switch phase locally — each client handles independently since they're in sync
+      // Auto-switch phase locally and play subtle completion sound
+      playTimerCompletionSound(phase);
       if (phase === 'FOCUS') {
         setPhase('BREAK');
         setTimeLeft(breakDurationRef.current);

@@ -4,17 +4,28 @@ import { createClient } from '@/lib/supabase/server';
 
 export async function POST(req: NextRequest) {
   try {
-    const { roomName, identity, ownerId } = await req.json();
+    const { roomName, identity } = await req.json();
 
     if (!roomName || !identity) {
       return NextResponse.json({ error: 'roomName and identity are required' }, { status: 400 });
     }
 
-    // Verify authenticated user is the owner
+    // Verify authenticated user session
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    if (!user || user.id !== ownerId) {
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized. Please sign in.' }, { status: 401 });
+    }
+
+    // Verify against Supabase that the caller is the true owner of the room
+    const { data: dbRoom, error: dbError } = await supabase
+      .from('rooms')
+      .select('owner_id')
+      .eq('id', roomName)
+      .maybeSingle();
+
+    if (dbError || !dbRoom || dbRoom.owner_id !== user.id) {
       return NextResponse.json({ error: 'Only the room owner can remove participants' }, { status: 403 });
     }
 
