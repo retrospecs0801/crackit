@@ -7,3 +7,13 @@ CREATE INDEX IF NOT EXISTS idx_rooms_co_owners ON public.rooms USING GIN (co_own
 
 -- Comment on column
 COMMENT ON COLUMN public.rooms.co_owners IS 'Array of display names or UUIDs representing room co-owners.';
+
+-- Update the rooms FOR UPDATE policy so the current owner can transfer ownership (change owner_id) and manage co_owners
+DROP POLICY IF EXISTS "rooms_update_owner" ON public.rooms;
+
+CREATE POLICY "rooms_update_owner"
+  ON public.rooms
+  FOR UPDATE
+  TO authenticated
+  USING (auth.uid() = owner_id)
+  WITH CHECK (true);

@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
         newOwnerDisplayName: action === 'transfer' ? targetDisplayName : undefined,
         oldOwnerDisplayName: action === 'transfer' ? (user.user_metadata?.display_name || user.email || user.id) : undefined,
       });
-      await svc.sendData(roomId, new TextEncoder().encode(payload), 1);
+      await svc.sendData(roomId, new TextEncoder().encode(payload), 1, { topic: 'room-roles' });
     } catch (lkErr) {
       console.warn('[Roles API] Could not broadcast via LiveKit server:', lkErr);
     }

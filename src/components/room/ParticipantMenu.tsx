@@ -173,10 +173,20 @@ export function ParticipantMenu({
         }),
       });
       if (res.ok) {
-        onUpdateRoles?.(prev => ({
-          ...prev,
-          coOwners: prev.coOwners.includes(targetDisplayName) ? prev.coOwners : [...prev.coOwners, targetDisplayName]
-        }));
+        const nextRoles = {
+          owner: roomRoles?.owner || localDisplayName || null,
+          coOwners: Array.from(new Set([...(roomRoles?.coOwners || []), targetDisplayName, targetUserId])).filter(Boolean)
+        };
+        onUpdateRoles?.(() => nextRoles);
+        try {
+          const syncPayload = new TextEncoder().encode(JSON.stringify({
+            type: 'ROLE_SYNC',
+            roles: nextRoles,
+          }));
+          send(syncPayload, { reliable: true });
+        } catch (e) {
+          console.error('Failed to broadcast ROLE_SYNC after promote:', e);
+        }
       } else {
         const err = await res.json();
         alert(err.error || 'Failed to promote to co-owner');
@@ -204,10 +214,20 @@ export function ParticipantMenu({
         }),
       });
       if (res.ok) {
-        onUpdateRoles?.(prev => ({
-          ...prev,
-          coOwners: prev.coOwners.filter(n => n !== targetDisplayName)
-        }));
+        const nextRoles = {
+          owner: roomRoles?.owner || localDisplayName || null,
+          coOwners: (roomRoles?.coOwners || []).filter(n => n !== targetDisplayName && n !== targetUserId)
+        };
+        onUpdateRoles?.(() => nextRoles);
+        try {
+          const syncPayload = new TextEncoder().encode(JSON.stringify({
+            type: 'ROLE_SYNC',
+            roles: nextRoles,
+          }));
+          send(syncPayload, { reliable: true });
+        } catch (e) {
+          console.error('Failed to broadcast ROLE_SYNC after demote:', e);
+        }
       } else {
         const err = await res.json();
         alert(err.error || 'Failed to remove co-owner role');
@@ -237,16 +257,24 @@ export function ParticipantMenu({
         }),
       });
       if (res.ok) {
-        onUpdateRoles?.(prev => {
-          const filtered = prev.coOwners.filter(n => n !== targetDisplayName);
-          const nextCoOwners = currentOwner !== targetDisplayName && !filtered.includes(currentOwner)
-            ? [...filtered, currentOwner]
-            : filtered;
-          return {
-            owner: targetDisplayName,
-            coOwners: nextCoOwners,
-          };
-        });
+        const filtered = (roomRoles?.coOwners || []).filter(n => n !== targetDisplayName && n !== targetUserId);
+        const nextCoOwners = currentOwner !== targetDisplayName && !filtered.includes(currentOwner)
+          ? [...filtered, currentOwner]
+          : filtered;
+        const nextRoles = {
+          owner: targetDisplayName,
+          coOwners: nextCoOwners,
+        };
+        onUpdateRoles?.(() => nextRoles);
+        try {
+          const syncPayload = new TextEncoder().encode(JSON.stringify({
+            type: 'ROLE_SYNC',
+            roles: nextRoles,
+          }));
+          send(syncPayload, { reliable: true });
+        } catch (e) {
+          console.error('Failed to broadcast ROLE_SYNC after transfer:', e);
+        }
       } else {
         const err = await res.json();
         alert(err.error || 'Failed to transfer room ownership');
