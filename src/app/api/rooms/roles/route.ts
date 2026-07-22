@@ -89,8 +89,10 @@ export async function POST(req: NextRequest) {
       const payload = JSON.stringify({
         type: action === 'promote' ? 'ROLE_PROMOTE' : action === 'demote' ? 'ROLE_DEMOTE' : 'ROOM_TRANSFER',
         targetDisplayName,
+        targetUserId,
         newOwnerDisplayName: action === 'transfer' ? targetDisplayName : undefined,
         oldOwnerDisplayName: action === 'transfer' ? (user.user_metadata?.display_name || user.email || user.id) : undefined,
+        oldOwnerUserId: action === 'transfer' ? user.id : undefined,
       });
       await svc.sendData(roomId, new TextEncoder().encode(payload), 1, { topic: 'room-roles' });
     } catch (lkErr) {

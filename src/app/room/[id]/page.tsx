@@ -62,27 +62,25 @@ function RoomRolesSyncManager({
       const event = JSON.parse(decoded);
       if (event.type === 'ROLE_SYNC' && event.roles) {
         onUpdateRoles(() => event.roles);
-      } else if (event.type === 'ROLE_PROMOTE' && event.targetDisplayName) {
+      } else if (event.type === 'ROLE_PROMOTE' && (event.targetDisplayName || event.targetUserId)) {
         onUpdateRoles(prev => ({
           ...prev,
-          coOwners: prev.coOwners.includes(event.targetDisplayName)
-            ? prev.coOwners
-            : [...prev.coOwners, event.targetDisplayName]
+          coOwners: Array.from(new Set([...prev.coOwners, event.targetDisplayName, event.targetUserId])).filter(Boolean)
         }));
-      } else if (event.type === 'ROLE_DEMOTE' && event.targetDisplayName) {
+      } else if (event.type === 'ROLE_DEMOTE' && (event.targetDisplayName || event.targetUserId)) {
         onUpdateRoles(prev => ({
           ...prev,
-          coOwners: prev.coOwners.filter(name => name !== event.targetDisplayName)
+          coOwners: prev.coOwners.filter(name => name !== event.targetDisplayName && name !== event.targetUserId)
         }));
-      } else if (event.type === 'ROOM_TRANSFER' && event.newOwnerDisplayName) {
+      } else if (event.type === 'ROOM_TRANSFER' && (event.newOwnerDisplayName || event.targetDisplayName || event.targetUserId)) {
+        const newOwner = event.newOwnerDisplayName || event.targetDisplayName || event.targetUserId;
         const oldOwner = event.oldOwnerDisplayName || prevOwnerHelper(roomRolesRef.current);
+        const oldOwnerId = event.oldOwnerUserId || '';
         onUpdateRoles(prev => {
-          const filtered = prev.coOwners.filter(n => n !== event.newOwnerDisplayName);
-          const nextCoOwners = oldOwner && oldOwner !== event.newOwnerDisplayName && !filtered.includes(oldOwner)
-            ? [...filtered, oldOwner]
-            : filtered;
+          const filtered = prev.coOwners.filter(n => n !== newOwner && n !== event.targetUserId);
+          const nextCoOwners = Array.from(new Set([...filtered, oldOwner, oldOwnerId])).filter(Boolean);
           return {
-            owner: event.newOwnerDisplayName,
+            owner: newOwner,
             coOwners: nextCoOwners
           };
         });
@@ -619,11 +617,10 @@ export default function RoomPage({ params }: { params: { id: string } }) {
   );
 
   const isOwner = Boolean(
-    isOriginalCreator ||
     (currentUser && roomRoles.owner && (
       currentUser.displayName === roomRoles.owner ||
       currentUser.id === roomRoles.owner
-    ))
+    )) || (!roomRoles.owner && isOriginalCreator)
   );
 
   const isCoOwner = Boolean(

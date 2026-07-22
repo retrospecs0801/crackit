@@ -257,10 +257,10 @@ export function ParticipantMenu({
         }),
       });
       if (res.ok) {
+        const oldOwnerName = roomRoles?.owner || localDisplayName || '';
+        const oldOwnerId = currentUserId || localParticipant?.identity || '';
         const filtered = (roomRoles?.coOwners || []).filter(n => n !== targetDisplayName && n !== targetUserId);
-        const nextCoOwners = currentOwner !== targetDisplayName && !filtered.includes(currentOwner)
-          ? [...filtered, currentOwner]
-          : filtered;
+        const nextCoOwners = Array.from(new Set([...filtered, oldOwnerName, oldOwnerId])).filter(Boolean);
         const nextRoles = {
           owner: targetDisplayName,
           coOwners: nextCoOwners,
