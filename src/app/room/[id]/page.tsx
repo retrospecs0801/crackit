@@ -13,7 +13,7 @@ import { AppsTray } from '@/components/room/AppsTray';
 import VideoGrid from '@/components/room/VideoGrid';
 import MediaControls from '@/components/room/MediaControls';
 import { RoomParticipantSidebar } from '@/components/room/RoomParticipantSidebar';
-import { EyeOff, LayoutGrid, Loader2, ShieldAlert, ChevronLeft, ChevronRight } from 'lucide-react';
+import { EyeOff, LayoutGrid, Loader2, ShieldAlert, ChevronLeft, ChevronRight, MessageSquare, Timer, Grid3X3, ChevronDown } from 'lucide-react';
 import { useConnectionState, useDataChannel, useRoomContext, useParticipants } from '@livekit/components-react';
 import { mockRooms } from '@/lib/mockData';
 import { WelcomeModal } from '@/components/room/WelcomeModal';
@@ -149,50 +149,6 @@ function RoomRolesSyncManager({
   return null;
 }
 
-function RoomPresenceMonitor({
-  ownerId,
-  ownerDisplayName,
-  isOwner,
-  setIsOwnerPresent,
-}: {
-  ownerId?: string | null;
-  ownerDisplayName?: string | null;
-  isOwner: boolean;
-  setIsOwnerPresent: (present: boolean) => void;
-}) {
-  const participants = useParticipants();
-
-  useEffect(() => {
-    if (isOwner) {
-      setIsOwnerPresent(true);
-      return;
-    }
-    let found = false;
-    for (const p of participants) {
-      let dName = p.name || p.identity;
-      let parsedUserId: string | null = null;
-      try {
-        if (p.metadata) {
-          const m = JSON.parse(p.metadata);
-          if (m.displayName) dName = m.displayName;
-          if (m.userId) parsedUserId = m.userId;
-        }
-      } catch {}
-
-      if (
-        (ownerId && (p.identity === ownerId || parsedUserId === ownerId)) ||
-        (ownerDisplayName && dName === ownerDisplayName)
-      ) {
-        found = true;
-        break;
-      }
-    }
-    setIsOwnerPresent(found);
-  }, [participants, isOwner, ownerId, ownerDisplayName, setIsOwnerPresent]);
-
-  return null;
-}
-
 function RoomParticipantLogger({ setSystemBubbles }: { setSystemBubbles: React.Dispatch<React.SetStateAction<Array<{ id: string; text: string; timestamp: number; type?: 'system' | 'log' }>>> }) {
   const room = useRoomContext();
 
@@ -269,6 +225,17 @@ export default function RoomPage({ params }: { params: { id: string } }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showVideoGrid, setShowVideoGrid] = useState(true);
 
+  // Mobile bottom sheet state
+  const [mobilePanel, setMobilePanel] = useState<'chat' | 'timer' | 'apps' | null>(null);
+  const [activeMobilePanel, setActiveMobilePanel] = useState<'chat' | 'timer' | 'apps'>('chat');
+  const toggleMobilePanel = (panel: 'chat' | 'timer' | 'apps') => {
+    setMobilePanel(prev => {
+      if (prev === panel) return null;
+      setActiveMobilePanel(panel);
+      return panel;
+    });
+  };
+
   const [sidebarWidth, setSidebarWidth] = useState(300);
   const [isResizing, setIsResizing] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -311,7 +278,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
   const [roomData, setRoomData] = useState<Room | null>(null);
   const [roomRoles, setRoomRoles] = useState<RoomRoleState>({ owner: null, coOwners: [] });
   const hasInitializedRoles = useRef(false);
-  const [isOwnerPresent, setIsOwnerPresent] = useState(true);
+
   const [isNotFound] = useState(false);
   const [activeTab, setActiveTab] = useState<'focus' | 'apps'>('focus');
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -339,7 +306,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
   const isFocusChatLocked = Boolean(
     pomodoroState.isRunning &&
     pomodoroState.phase === 'FOCUS' &&
-    roomData?.focusChatLockEnabled !== false
+    roomData?.focusChatLockEnabled === true
   );
 
   const handlePomodoroStateChange = useCallback((state: { isRunning: boolean; phase: 'FOCUS' | 'BREAK'; lastEventType?: string }) => {
@@ -667,7 +634,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
     )
   );
 
-  const canControlRoom = Boolean(isOwner || (isCoOwner && isOwnerPresent));
+  const canControlRoom = Boolean(isOwner || isCoOwner);
 
   useEffect(() => {
     if (!roomData?.id) return;
@@ -702,7 +669,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
       <div className="h-screen w-full flex flex-col items-center justify-center bg-canvas">
         <h1 className="font-serif text-[24px] text-ink mb-4">Room not found</h1>
         <Link href="/" className="font-mono text-[14px] text-ink hover:text-ink-muted underline underline-offset-4">
-          ← Back to CrackIt
+          ← Back to Crackit
         </Link>
       </div>
     );
@@ -721,7 +688,8 @@ export default function RoomPage({ params }: { params: { id: string } }) {
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         />
 
-        <div className="flex-1 flex flex-row mt-[52px] h-[calc(100vh-52px)] relative">
+        {/* Desktop uses 52px navbar, Mobile uses 44px navbar */}
+        <div className="flex-1 flex flex-col md:flex-row mt-[44px] md:mt-[52px] h-[calc(100vh-44px)] md:h-[calc(100vh-52px)] relative">
           <style>{`
             @keyframes blinkCursor {
               0% { opacity: 0; }
@@ -729,7 +697,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
             }
           `}</style>
 
-          <div className="absolute top-4 right-4 z-10">
+          <div className="absolute top-4 right-4 z-10 hidden md:block">
             {livekitToken === null && tokenError === null && (
               <div className="px-3 py-1 flex items-center gap-1 rounded-full shadow-sm bg-surface border border-border-default">
                 <span className="font-mono text-[11px] text-text-secondary">Connecting...</span>
@@ -788,16 +756,49 @@ export default function RoomPage({ params }: { params: { id: string } }) {
                 }}
                 setSystemBubbles={setSystemBubbles}
               />
-              <RoomPresenceMonitor
-                ownerId={roomData.owner_id || roomData.ownerId}
-                ownerDisplayName={roomRoles.owner || roomData.owner}
-                isOwner={isOwner}
-                setIsOwnerPresent={setIsOwnerPresent}
-              />
+
               <RoomParticipantLogger setSystemBubbles={setSystemBubbles} />
               <RoomConnectionStatus roomName={roomData.name} examTag={roomData.examTag} />
 
-              {/* Left Participant Avatars Dock */}
+              {/* ===== MOBILE ACTION BAR — media controls + panel toggles ===== */}
+              <div className="flex md:hidden items-center justify-between px-2 py-1.5 bg-surface border-b border-border-default shrink-0 gap-1.5">
+                {/* Media Controls (compact) */}
+                <MediaControls
+                  micDisabled={Boolean(roomData.micDisabled && !canControlRoom)}
+                  cameraDisabled={Boolean(roomData.cameraDisabled && !canControlRoom)}
+                  isFocusMicLocked={Boolean(isFocusMicLocked && !canControlRoom)}
+                  forceUnmuteTrigger={forceUnmuteTrigger}
+                />
+                {/* Panel Toggle Buttons */}
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => toggleMobilePanel('chat')}
+                    className={`p-2 rounded-lg border transition-all text-[10px] font-sans font-medium flex items-center gap-1 ${
+                      mobilePanel === 'chat' ? 'bg-accent-green text-white border-accent-green' : 'bg-surface-raised border-border-default text-text-secondary'
+                    }`}
+                  >
+                    <MessageSquare size={14} />
+                  </button>
+                  <button
+                    onClick={() => toggleMobilePanel('timer')}
+                    className={`p-2 rounded-lg border transition-all text-[10px] font-sans font-medium flex items-center gap-1 ${
+                      mobilePanel === 'timer' ? 'bg-accent-green text-white border-accent-green' : 'bg-surface-raised border-border-default text-text-secondary'
+                    }`}
+                  >
+                    <Timer size={14} />
+                  </button>
+                  <button
+                    onClick={() => toggleMobilePanel('apps')}
+                    className={`p-2 rounded-lg border transition-all text-[10px] font-sans font-medium flex items-center gap-1 ${
+                      mobilePanel === 'apps' ? 'bg-accent-green text-white border-accent-green' : 'bg-surface-raised border-border-default text-text-secondary'
+                    }`}
+                  >
+                    <Grid3X3 size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {/* ===== DESKTOP: Left Participant Avatars Dock (unchanged) ===== */}
               <RoomParticipantSidebar
                 showVideoGrid={showVideoGrid}
                 onToggleVideoGrid={() => setShowVideoGrid(!showVideoGrid)}
@@ -821,24 +822,24 @@ export default function RoomPage({ params }: { params: { id: string } }) {
                 }}
               />
 
-              {/* Main Column */}
-              <div className="flex-1 relative flex flex-col items-center justify-between p-4 overflow-hidden bg-canvas">
+              {/* ===== Main Column ===== */}
+              <div className="flex-1 relative flex flex-col items-center justify-between p-1 md:p-4 overflow-hidden bg-canvas">
                 {/* Main Study Stage Window Container */}
-                <div className="w-full flex-1 relative rounded-2xl border border-border-default bg-surface shadow-2xl overflow-hidden flex flex-col">
+                <div className="w-full flex-1 relative rounded-xl md:rounded-2xl border border-border-default bg-surface shadow-2xl overflow-hidden flex flex-col">
                   {/* Top Overlay Badge */}
-                  <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-                    <span className="font-mono text-[11px] bg-surface-raised text-text-primary border border-border-default px-2.5 py-0.5 rounded-md font-semibold tracking-wide shadow-sm">
+                  <div className="absolute top-2 left-2 md:top-4 md:left-4 z-10 flex items-center gap-1.5 md:gap-2">
+                    <span className="font-mono text-[9px] md:text-[11px] bg-surface-raised text-text-primary border border-border-default px-1.5 md:px-2.5 py-0.5 rounded-md font-semibold tracking-wide shadow-sm">
                       {roomData.examTag}
                     </span>
                     {roomData.topic && (
-                      <span className="font-sans text-xs text-text-secondary bg-surface-raised/80 backdrop-blur-md px-2.5 py-0.5 border border-border-default rounded-md shadow-sm">
+                      <span className="hidden md:inline font-sans text-xs text-text-secondary bg-surface-raised/80 backdrop-blur-md px-2.5 py-0.5 border border-border-default rounded-md shadow-sm">
                         {roomData.topic}
                       </span>
                     )}
                   </div>
 
                   {/* Stage Content: Video Grid OR Ambient Background */}
-                  <div className="w-full flex-1 p-4 overflow-hidden flex flex-col justify-center">
+                  <div className="w-full flex-1 p-1 md:p-4 overflow-hidden flex flex-col justify-center">
                     {showVideoGrid ? (
                       <VideoGrid
                         currentUserId={currentUser?.id}
@@ -861,19 +862,19 @@ export default function RoomPage({ params }: { params: { id: string } }) {
                         }}
                       />
                     ) : (
-                      <div className="w-full h-full rounded-xl border border-border-default bg-gradient-to-br from-surface via-canvas to-surface-raised flex flex-col items-center justify-center p-6 relative overflow-hidden select-none">
+                      <div className="w-full h-full rounded-xl border border-border-default bg-gradient-to-br from-surface via-canvas to-surface-raised flex flex-col items-center justify-center p-6 max-md:p-3 relative overflow-hidden select-none">
                         <div className="absolute inset-0 bg-[linear-gradient(to_right,var(--border-default)_1px,transparent_1px),linear-gradient(to_bottom,var(--border-default)_1px,transparent_1px)] bg-[size:32px_32px] opacity-20 pointer-events-none" />
 
-                        <div className="relative z-10 max-w-md bg-surface-raised/90 border border-border-default backdrop-blur-xl rounded-2xl p-8 flex flex-col items-center text-center gap-4 shadow-2xl">
-                          <div className="w-14 h-14 rounded-2xl bg-surface border border-border-default flex items-center justify-center text-accent-green shadow-inner">
-                            <EyeOff size={26} />
+                        <div className="relative z-10 max-w-md bg-surface-raised/90 border border-border-default backdrop-blur-xl rounded-2xl p-8 max-md:p-5 flex flex-col items-center text-center gap-4 max-md:gap-2 shadow-2xl">
+                          <div className="w-14 h-14 max-md:w-10 max-md:h-10 rounded-2xl bg-surface border border-border-default flex items-center justify-center text-accent-green shadow-inner">
+                            <EyeOff size={26} className="max-md:!w-5 max-md:!h-5" />
                           </div>
                           <div className="flex flex-col gap-1.5">
-                            <h3 className="font-sans text-lg font-bold text-text-primary tracking-tight">
+                            <h3 className="font-sans text-lg max-md:text-sm font-bold text-text-primary tracking-tight">
                               Ambient Study Mode
                             </h3>
-                            <p className="font-sans text-xs text-text-secondary leading-relaxed">
-                              Video screens are hidden for deep focus. Audio, timers, and chat remain connected and active.
+                            <p className="font-sans text-xs max-md:text-[10px] text-text-secondary leading-relaxed">
+                              Video screens are hidden for deep focus.
                             </p>
                           </div>
                           <button
@@ -889,14 +890,8 @@ export default function RoomPage({ params }: { params: { id: string } }) {
                   </div>
                 </div>
 
-                {/* Floating Bottom Controls Pill */}
-                <div className="pt-4 shrink-0 z-20">
-                  {!isOwner && !isOwnerPresent && (
-                    <div className="mb-2 px-3 py-1.5 rounded-lg bg-surface-raised border border-accent-terracotta/40 flex items-center justify-center gap-2 text-xs font-sans font-medium text-accent-terracotta shadow-sm">
-                      <span className="w-2 h-2 rounded-full bg-accent-terracotta animate-pulse" />
-                      <span>Room owner disconnected — controls locked</span>
-                    </div>
-                  )}
+                {/* Floating Bottom Controls Pill — DESKTOP ONLY */}
+                <div className="hidden md:block pt-4 shrink-0 z-20">
                   <MediaControls
                     micDisabled={Boolean(roomData.micDisabled && !canControlRoom)}
                     cameraDisabled={Boolean(roomData.cameraDisabled && !canControlRoom)}
@@ -906,7 +901,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
                 </div>
               </div>
 
-              {/* Resize Handle (placed outside sidebar so it stays visible/draggable when collapsed) */}
+              {/* ===== DESKTOP: Resize Handle (unchanged) ===== */}
               <div
                 onMouseDown={startResizing}
                 className={`
@@ -944,17 +939,15 @@ export default function RoomPage({ params }: { params: { id: string } }) {
                 </button>
               </div>
 
-              {/* Sidebar */}
+              {/* ===== DESKTOP: Right Sidebar (unchanged) ===== */}
               <div
                 className={`
-                  fixed inset-0 z-40 top-[52px] flex flex-col md:static md:z-0
-                  transition-transform duration-300 bg-surface border-l border-border-default
-                  ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
+                  hidden md:flex flex-col md:static md:z-0
+                  bg-surface md:border-l md:border-border-default
                   ${isCollapsed ? 'md:border-l-0 overflow-hidden' : ''}
+                  md:w-[var(--sidebar-width)] md:min-w-[var(--sidebar-width)]
                 `}
                 style={{
-                  width: 'var(--sidebar-width)',
-                  minWidth: 'var(--sidebar-width)',
                   '--sidebar-width': isCollapsed ? '0px' : `${sidebarWidth}px`,
                 } as any}
               >
@@ -1030,15 +1023,84 @@ export default function RoomPage({ params }: { params: { id: string } }) {
                   </div>
                 </div>
               </div>
+
+              {/* ===== MOBILE: Bottom Sheet for Chat / Timer / Apps ===== */}
+              <div 
+                className={`md:hidden fixed inset-x-0 bottom-0 z-50 flex flex-col bg-surface rounded-t-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.2)] transition-transform duration-300 ease-in-out ${
+                  mobilePanel !== null ? 'translate-y-0' : 'translate-y-full'
+                }`} 
+                style={{ height: '55vh' }}
+              >
+                {/* Drag handle + close */}
+                <div className="flex items-center justify-between px-3 py-2 bg-surface border-t border-border-default rounded-t-2xl shrink-0">
+                  <div className="flex items-center gap-2">
+                    <div className="w-10 h-1 rounded-full bg-border-default" />
+                    <span className="font-sans text-[11px] font-semibold text-text-primary uppercase tracking-wider">
+                      {activeMobilePanel === 'chat' ? 'Chat' : activeMobilePanel === 'timer' ? 'Focus Timer' : 'Apps'}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setMobilePanel(null)}
+                    className="p-1.5 rounded-full text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                  >
+                    <ChevronDown size={16} />
+                  </button>
+                </div>
+
+                {/* Panel Content */}
+                <div className="flex-1 bg-surface overflow-y-auto overflow-x-hidden">
+                  <div className={`h-full px-3 py-2 flex-col ${activeMobilePanel === 'chat' ? 'flex' : 'hidden'}`}>
+                    <ChatSidebar
+                      roomId={roomData.id}
+                      chatDisabled={Boolean(roomData.chatDisabled && !canControlRoom)}
+                      welcomeMessageText={roomData.welcomeMessageText}
+                      isFocusChatLocked={Boolean(isFocusChatLocked && !canControlRoom)}
+                      focusChatLockEnabled={roomData.focusChatLockEnabled}
+                      systemBubbles={systemBubbles}
+                    />
+                  </div>
+                  <div className={`p-3 ${activeMobilePanel === 'timer' ? 'block' : 'hidden'}`}>
+                    <div className="bg-surface-raised rounded-lg border border-border-default p-4">
+                      <PomodoroTimer
+                        isOwner={isOwner}
+                        canControlRoom={canControlRoom}
+                        currentUserId={currentUser?.id || currentUser?.displayName || ''}
+                        focusMicLockEnabled={roomData.focusMicLockEnabled}
+                        focusChatLockEnabled={roomData.focusChatLockEnabled}
+                        onPomodoroStateChange={handlePomodoroStateChange}
+                      />
+                    </div>
+                  </div>
+                  <div className={`p-3 ${activeMobilePanel === 'apps' ? 'block' : 'hidden'}`}>
+                    <AppsTray
+                      roomId={roomData.id}
+                      currentUserId={currentUser?.displayName ?? ''}
+                      currentUserIdStr={currentUser?.id || ''}
+                      isOwner={isOwner}
+                      canControlRoom={canControlRoom}
+                      roomData={roomData}
+                      onUpdateRoom={(updated) => setRoomData(prev => prev ? { ...prev, ...updated } : null)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Mobile bottom sheet backdrop */}
+              {mobilePanel !== null && (
+                <div
+                  className="md:hidden fixed inset-0 z-40 bg-black/20"
+                  onClick={() => setMobilePanel(null)}
+                />
+              )}
             </LiveKitRoom>
           ) : tokenError ? (
             <div className="flex-1 flex flex-col items-center justify-center bg-canvas p-6 z-50">
-              <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-surface border border-border-default shadow-2xl max-w-md text-center">
+              <div className="flex flex-col items-center gap-4 p-8 max-md:p-5 rounded-2xl bg-surface border border-border-default shadow-2xl max-w-md text-center">
                 <div className="w-12 h-12 rounded-full bg-accent-terracotta/10 border border-accent-terracotta flex items-center justify-center text-accent-terracotta">
                   <ShieldAlert size={24} />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <h3 className="font-sans text-lg font-bold text-text-primary">
+                  <h3 className="font-sans text-lg max-md:text-base font-bold text-text-primary">
                     Connection Failed
                   </h3>
                   <p className="font-sans text-xs text-text-secondary">
@@ -1061,14 +1123,14 @@ export default function RoomPage({ params }: { params: { id: string } }) {
                     href="/"
                     className="px-4 py-2 rounded-lg border border-border-default text-text-primary font-sans text-xs font-semibold hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
                   >
-                    ← Back to CrackIt
+                    ← Back to Crackit
                   </Link>
                 </div>
               </div>
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center bg-canvas p-6 z-50">
-              <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-surface border border-border-default shadow-2xl max-w-sm text-center">
+              <div className="flex flex-col items-center gap-4 p-8 max-md:p-5 rounded-2xl bg-surface border border-border-default shadow-2xl max-w-sm text-center">
                 <div className="w-12 h-12 rounded-full bg-accent-green/10 border border-accent-green flex items-center justify-center text-accent-green animate-pulse">
                   <Loader2 className="animate-spin" size={24} />
                 </div>
@@ -1076,7 +1138,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
                   <span className="font-mono text-[11px] px-2.5 py-0.5 rounded-full bg-border-default text-text-secondary self-center">
                     {roomData.examTag}
                   </span>
-                  <h3 className="font-sans text-lg font-bold text-text-primary mt-1">
+                  <h3 className="font-sans text-lg max-md:text-base font-bold text-text-primary mt-1">
                     Joining {roomData.name}...
                   </h3>
                   <p className="font-sans text-xs text-text-secondary">

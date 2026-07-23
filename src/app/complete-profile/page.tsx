@@ -142,7 +142,7 @@ function CompleteProfileForm() {
         </div>
 
         <p className="font-sans text-[13px] text-text-secondary mb-6">
-          Welcome to CrackIt! How should other students see you in study rooms?
+          Welcome to Crackit! How should other students see you in study rooms?
         </p>
 
         <div className="flex justify-center mb-6">
@@ -178,7 +178,7 @@ function CompleteProfileForm() {
             disabled={submitting}
             className="w-full h-[44px] bg-[#7A8B76] text-[#F4F0EB] rounded-lg font-sans font-semibold text-[13px] hover:opacity-90 transition-all disabled:opacity-50"
           >
-            {submitting ? 'Saving...' : 'Continue to CrackIt'}
+            {submitting ? 'Saving...' : 'Continue to Crackit'}
           </button>
         </form>
       </div>

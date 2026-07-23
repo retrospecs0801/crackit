@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
       cameraDisabled: roomDetails.cameraDisabled || false,
       chatDisabled: roomDetails.chatDisabled || false,
       focusMicLockEnabled: roomDetails.focusMicLockEnabled ?? true,
-      focusChatLockEnabled: roomDetails.focusChatLockEnabled ?? true,
+      focusChatLockEnabled: roomDetails.focusChatLockEnabled ?? false,
     };
 
     const supabaseAdmin = createAdminClient();
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
         chat_disabled: false,
         cam_mandatory: fullRoomDetails.camMandatory || false,
         focus_mic_lock_enabled: fullRoomDetails.focusMicLockEnabled ?? true,
-        focus_chat_lock_enabled: fullRoomDetails.focusChatLockEnabled ?? true,
+        focus_chat_lock_enabled: fullRoomDetails.focusChatLockEnabled ?? false,
       });
 
       if (insertError) {

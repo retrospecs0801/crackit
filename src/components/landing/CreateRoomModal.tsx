@@ -22,7 +22,7 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
   const [welcomeMessageEnabled, setWelcomeMessageEnabled] = useState(false);
   const [welcomeMessageText, setWelcomeMessageText] = useState('');
   const [focusMicLockEnabled, setFocusMicLockEnabled] = useState(true);
-  const [focusChatLockEnabled, setFocusChatLockEnabled] = useState(true);
+  const [focusChatLockEnabled, setFocusChatLockEnabled] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -142,7 +142,7 @@ export function CreateRoomModal({ isOpen, onClose }: CreateRoomModalProps) {
         chat_disabled: false,
         cam_mandatory: room.camMandatory || false,
         focus_mic_lock_enabled: room.focusMicLockEnabled ?? true,
-        focus_chat_lock_enabled: room.focusChatLockEnabled ?? true,
+        focus_chat_lock_enabled: room.focusChatLockEnabled ?? false,
       });
 
       if (supabaseError) {

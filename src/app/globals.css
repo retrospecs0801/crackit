@@ -152,4 +152,57 @@
     font-size: 12px;
     font-weight: 500;
   }
+
+  /* --- Mobile Room Overrides (≤767px) --- */
+  @media (max-width: 767px) {
+    .lk-grid-layout {
+      display: grid !important;
+      grid-template-columns: repeat(auto-fit, minmax(40%, 1fr)) !important;
+      grid-auto-rows: minmax(0, 1fr) !important;
+      gap: 6px !important;
+      padding: 6px !important;
+      padding-bottom: 50px !important; /* space for pagination */
+      overflow: hidden !important; /* we use our own pagination, no scroll */
+      height: 100% !important;
+    }
+
+    .lk-grid-layout > * {
+      position: static !important;
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .lk-participant-tile {
+      border-radius: 10px;
+    }
+
+    .lk-participant-name {
+      font-size: 10px;
+    }
+  }
+
+  /* Hide scrollbar but keep scroll */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Bottom sheet animation (outside @layer) */
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes slideDown {
+  from { transform: translateY(0); }
+  to   { transform: translateY(100%); }
+}
+.mobile-bottom-sheet-enter {
+  animation: slideUp 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.mobile-bottom-sheet-exit {
+  animation: slideDown 250ms cubic-bezier(0.4, 0, 1, 1) forwards;
 }

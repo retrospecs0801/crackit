@@ -19,8 +19,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CrackIt",
-  description: "CrackIt - Real-time peer-to-peer digital study rooms and interactive focus tracking",
+  title: "Crackit",
+  description: "Crackit - Real-time peer-to-peer digital study rooms and interactive focus tracking",
 };
 
 export default function RootLayout({

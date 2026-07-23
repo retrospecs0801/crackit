@@ -83,7 +83,7 @@ export function ProfileContainer({ targetUserId }: ProfileContainerProps) {
             className="inline-flex items-center gap-2 font-sans text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors"
           >
             <ArrowLeft size={14} />
-            Back to CrackIt
+            Back to Crackit
           </Link>
         </div>
 

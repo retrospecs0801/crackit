@@ -13,7 +13,7 @@ interface GoogleSignInModalProps {
 export function GoogleSignInModal({
   isOpen,
   onClose,
-  message = 'Sign in with Google to continue to CrackIt.',
+  message = 'Sign in with Google to continue to Crackit.',
 }: GoogleSignInModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

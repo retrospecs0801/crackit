@@ -41,8 +41,8 @@ export function ChatSidebar({
   };
 
   const displayWelcomeText = welcomeMessageText
-    ? welcomeMessageText + (focusChatLockEnabled !== false ? '\n\n• Chat will be locked during focus sessions.' : '')
-    : (focusChatLockEnabled !== false ? '• Chat will be locked during focus sessions.' : undefined);
+    ? welcomeMessageText + (focusChatLockEnabled === true ? '\n\n• Chat will be locked during focus sessions.' : '')
+    : (focusChatLockEnabled === true ? '• Chat will be locked during focus sessions.' : undefined);
 
   type FeedItem =
     | { type: 'chat'; id: string; timestamp: number; message: string; displayName: string }

@@ -18,7 +18,7 @@ export function ExamFilterBar({ activeFilter, onFilterChange, tabs }: ExamFilter
             <button
               key={tab}
               onClick={() => onFilterChange(tab)}
-              className="flex-shrink-0 flex items-center font-sans font-medium text-[13px] px-[16px] py-[6px] rounded-md transition-colors duration-150 whitespace-nowrap hover:opacity-80"
+              className="flex-shrink-0 flex items-center font-sans font-medium text-[12px] md:text-[13px] px-[12px] md:px-[16px] py-[6px] rounded-md transition-colors duration-150 whitespace-nowrap hover:opacity-80"
               style={isActive ? { backgroundColor: 'var(--tab-active-bg)', color: 'var(--tab-active-text)' } : { backgroundColor: 'transparent', color: 'var(--tab-inactive-text)' }}
             >
               {tab}

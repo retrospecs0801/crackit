@@ -20,7 +20,7 @@ export function RoomSettingsApp({ roomData, onUpdateRoom }: RoomSettingsAppProps
   const [cameraDisabled, setCameraDisabled] = useState(roomData.cameraDisabled || false);
   const [chatDisabled, setChatDisabled] = useState(roomData.chatDisabled || false);
   const [focusMicLockEnabled, setFocusMicLockEnabled] = useState(roomData.focusMicLockEnabled ?? true);
-  const [focusChatLockEnabled, setFocusChatLockEnabled] = useState(roomData.focusChatLockEnabled ?? true);
+  const [focusChatLockEnabled, setFocusChatLockEnabled] = useState(roomData.focusChatLockEnabled ?? false);
 
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);

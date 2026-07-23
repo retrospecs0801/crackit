@@ -80,27 +80,29 @@ export default function MediaControls({
     }
   }, [cameraDisabled, camEnabled, camProps]);
 
+  const btnBase = "border-none rounded-[8px] flex items-center justify-center transition-colors duration-150 text-white disabled:opacity-40 disabled:cursor-not-allowed";
+
   return (
     <div
       style={{
         zIndex: 10,
         boxShadow: '0 8px 32px rgba(0,0,0,0.25)'
       }}
-      className="bg-surface-raised border border-border-default rounded-[12px] flex items-center gap-3 px-5 py-2 shadow-2xl"
+      className="bg-surface-raised border border-border-default rounded-[12px] flex items-center gap-1.5 md:gap-3 px-2.5 md:px-5 py-1.5 md:py-2 shadow-2xl"
     >
       <button
         {...micProps}
         disabled={micDisabled || isFocusMicLocked}
         title={micDisabled || isFocusMicLocked ? "Microphone is locked during focus sessions" : "Toggle Mic"}
-        className={`w-10 h-10 border-none rounded-[8px] flex items-center justify-center transition-colors duration-150 text-white disabled:opacity-40 disabled:cursor-not-allowed ${
+        className={`w-8 h-8 md:w-10 md:h-10 ${btnBase} ${
           micEnabled && !micDisabled && !isFocusMicLocked
             ? 'bg-black/20 dark:bg-white/10 hover:bg-black/30 dark:hover:bg-white/20 text-text-primary' 
             : 'bg-[#C1654A] hover:bg-[#B5563E] text-white'
         }`}
       >
         {micEnabled && !micDisabled && !isFocusMicLocked
-          ? <Mic size={18} className="text-text-primary" />
-          : <MicOff size={18} className="text-white" />
+          ? <Mic size={16} className="md:!w-[18px] md:!h-[18px] text-text-primary" />
+          : <MicOff size={16} className="md:!w-[18px] md:!h-[18px] text-white" />
         }
       </button>
 
@@ -108,36 +110,36 @@ export default function MediaControls({
         {...camProps}
         disabled={cameraDisabled}
         title={cameraDisabled ? "Camera is disabled by host" : "Toggle Camera"}
-        className={`w-10 h-10 border-none rounded-[8px] flex items-center justify-center transition-colors duration-150 text-white disabled:opacity-40 disabled:cursor-not-allowed ${
+        className={`w-8 h-8 md:w-10 md:h-10 ${btnBase} ${
           camEnabled && !cameraDisabled
             ? 'bg-black/20 dark:bg-white/10 hover:bg-black/30 dark:hover:bg-white/20 text-text-primary' 
             : 'bg-[#C1654A] hover:bg-[#B5563E] text-white'
         }`}
       >
         {camEnabled && !cameraDisabled
-          ? <Video size={18} className="text-text-primary" />
-          : <VideoOff size={18} className="text-white" />
+          ? <Video size={16} className="md:!w-[18px] md:!h-[18px] text-text-primary" />
+          : <VideoOff size={16} className="md:!w-[18px] md:!h-[18px] text-white" />
         }
       </button>
 
       <button
         {...screenProps}
         title={screenEnabled ? "Stop Screen Share" : "Share Screen"}
-        className={`w-10 h-10 border-none rounded-[8px] flex items-center justify-center transition-colors duration-150 text-white ${
+        className={`w-8 h-8 md:w-10 md:h-10 ${btnBase} ${
           screenEnabled
             ? 'bg-accent-green hover:bg-accent-green/90 text-white shadow-[0_0_12px_rgba(92,122,90,0.5)]' 
             : 'bg-black/20 dark:bg-white/10 hover:bg-black/30 dark:hover:bg-white/20 text-text-primary'
         }`}
       >
-        <Monitor size={18} className={screenEnabled ? "text-white" : "text-text-primary"} />
+        <Monitor size={16} className={`md:!w-[18px] md:!h-[18px] ${screenEnabled ? "text-white" : "text-text-primary"}`} />
       </button>
 
       <button
         onClick={handleInvite}
-        className="bg-transparent border border-border-default rounded-[8px] flex items-center gap-2 px-3 h-10 font-sans font-semibold text-[12px] text-text-secondary hover:bg-accent-green hover:border-accent-green hover:text-white transition-colors duration-150 cursor-pointer"
+        className="bg-transparent border border-border-default rounded-[8px] flex items-center gap-1.5 md:gap-2 px-2 md:px-3 h-8 md:h-10 font-sans font-semibold text-[11px] md:text-[12px] text-text-secondary hover:bg-accent-green hover:border-accent-green hover:text-white transition-colors duration-150 cursor-pointer"
       >
-        {copied ? <Check size={14} /> : <Share size={14} />}
-        {copied ? 'Link copied!' : 'Invite'}
+        {copied ? <Check size={12} className="md:!w-[14px] md:!h-[14px]" /> : <Share size={12} className="md:!w-[14px] md:!h-[14px]" />}
+        <span className="hidden md:inline">{copied ? 'Link copied!' : 'Invite'}</span>
       </button>
     </div>
   )

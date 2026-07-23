@@ -441,9 +441,9 @@ export function PomodoroTimer({ isOwner, canControlRoom, focusMicLockEnabled, fo
           )}
 
           {/* Focus Lock Hint */}
-          {(focusMicLockEnabled !== false || focusChatLockEnabled !== false) && (
+          {(focusMicLockEnabled !== false || focusChatLockEnabled === true) && (
             <div className="font-sans text-[11px] text-text-secondary mt-2 text-center">
-              {focusMicLockEnabled !== false && focusChatLockEnabled !== false
+              {focusMicLockEnabled !== false && focusChatLockEnabled === true
                 ? "Mic and chat are disabled during focus"
                 : focusMicLockEnabled !== false
                 ? "Mic is disabled during focus"

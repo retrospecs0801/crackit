@@ -18,15 +18,15 @@ export default function AboutPage() {
           href="/"
           className="inline-flex items-center gap-2 font-sans text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors self-start sm:self-center mb-10"
         >
-          ← Back to CrackIt
+          ← Back to Crackit
         </Link>
 
         <div className="w-12 h-12 rounded-2xl border border-border-default bg-surface shadow-sm flex items-center justify-center mb-6 overflow-hidden">
-          <img src="/logo.jpg" alt="CrackIt Logo" className="w-full h-full object-cover" />
+          <img src="/logo.jpg" alt="Crackit Logo" className="w-full h-full object-cover" />
         </div>
 
         <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-medium text-text-primary tracking-tight leading-[1.2] mb-8">
-          About CrackIt
+          About Crackit
         </h1>
 
         <div className="p-8 sm:p-10 rounded-2xl border border-border-default bg-surface/60 backdrop-blur-sm shadow-sm max-w-2xl text-left sm:text-center relative overflow-hidden">

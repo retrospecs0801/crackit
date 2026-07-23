@@ -132,7 +132,7 @@ export function Navbar({ onCreateRoom }: { onCreateRoom: () => void }) {
       <nav className="fixed top-0 left-0 right-0 h-[56px] flex items-center justify-between px-6 z-50 border-b" style={{ backgroundColor: 'var(--nav-bg)', borderColor: 'var(--card-border)', backdropFilter: 'blur(12px)' }}>
         <Link href="/" className="flex items-center gap-2 font-sans text-[20px] font-semibold text-text-primary hover:opacity-80 transition-opacity">
           <div className="w-[8px] h-[8px] rounded-full bg-accent-green"></div>
-          crackIt
+          Crackit
         </Link>
 
         <div className="flex items-center gap-4">
@@ -186,7 +186,7 @@ export function Navbar({ onCreateRoom }: { onCreateRoom: () => void }) {
 
           <button
             onClick={handleCreateRoomClick}
-            className="rounded-lg font-sans font-semibold text-[13px] px-4 py-2 hover:opacity-90 hover:shadow-md hover:-translate-y-[1px] transition-all duration-200"
+            className="hidden md:block rounded-lg font-sans font-semibold text-[13px] px-4 py-2 hover:opacity-90 hover:shadow-md hover:-translate-y-[1px] transition-all duration-200"
             style={{ backgroundColor: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)' }}
           >
             Create Room

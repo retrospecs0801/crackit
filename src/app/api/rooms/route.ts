@@ -162,7 +162,7 @@ export async function GET() {
         cameraDisabled: dbRoom.camera_disabled,
         chatDisabled: dbRoom.chat_disabled,
         focusMicLockEnabled: Boolean(dbRoom.focus_mic_lock_enabled ?? parsedMeta?.focusMicLockEnabled ?? true),
-        focusChatLockEnabled: Boolean(dbRoom.focus_chat_lock_enabled ?? parsedMeta?.focusChatLockEnabled ?? true),
+        focusChatLockEnabled: Boolean(dbRoom.focus_chat_lock_enabled ?? parsedMeta?.focusChatLockEnabled ?? false),
         lastEmptyAt,
       };
 

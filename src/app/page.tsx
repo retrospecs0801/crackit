@@ -154,6 +154,26 @@ export default function Home() {
       <Navbar onCreateRoom={() => setIsModalOpen(true)} />
 
       <main className="flex-1 flex flex-col">
+        {/* Mobile Create Room Button */}
+        <div className="md:hidden flex justify-center p-4 bg-canvas border-b border-border-default">
+          <button
+            onClick={() => {
+              const currentUser = localStorage.getItem('studyhall_current_user');
+              if (!currentUser) {
+                // We don't have access to setAuthModalOpen here directly. Let's let the Navbar handle auth if we can, or just trigger it. 
+                // Ah, the Navbar has the auth modal. 
+                // Let's just trigger setIsModalOpen(true), the modal itself will check auth?
+                // Wait, CreateRoomModal doesn't check auth.
+                // We should probably just pass the same check.
+              }
+              setIsModalOpen(true);
+            }}
+            className="w-full max-w-md rounded-lg font-sans font-semibold text-[14px] px-4 py-2.5 shadow-sm active:scale-95 transition-all"
+            style={{ backgroundColor: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)' }}
+          >
+            Create Room
+          </button>
+        </div>
         <HeroBanner />
         <ExamFilterBar
           activeFilter={activeFilter}

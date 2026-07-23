@@ -1,7 +1,7 @@
 export function HeroBanner() {
   return (
     <section
-      className="relative w-full pt-[80px] pb-[64px] flex flex-col items-center text-center overflow-hidden"
+      className="relative w-full pt-[40px] md:pt-[80px] pb-[32px] md:pb-[64px] flex flex-col items-center text-center overflow-hidden"
       style={{ backgroundColor: 'var(--hero-bg)', backgroundImage: 'radial-gradient(ellipse at 50% 0%, rgba(92,122,90,0.06) 0%, transparent 70%)' }}
     >
       {/* Noise Texture */}
@@ -25,14 +25,14 @@ export function HeroBanner() {
           Today&apos;s focus
         </span>
 
-        <div className="relative mb-12">
+        <div className="relative mb-8 md:mb-12">
           <span
-            className="absolute -top-[40px] -left-[30px] font-serif text-[120px] leading-none select-none"
+            className="absolute -top-[20px] -left-[15px] md:-top-[40px] md:-left-[30px] font-serif text-[80px] md:text-[120px] leading-none select-none"
             style={{ color: '#D4CFC9' }}
           >
             &ldquo;
           </span>
-          <h1 className="relative font-serif font-medium text-[28px] md:text-[40px] max-w-[600px] leading-[1.25] tracking-[-0.02em] text-text-primary">
+          <h1 className="relative font-serif font-medium text-[22px] md:text-[40px] max-w-[600px] leading-[1.25] tracking-[-0.02em] text-text-primary px-4 md:px-0">
             The secret of getting ahead is getting started.
           </h1>
         </div>

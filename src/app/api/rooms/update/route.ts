@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
       cameraDisabled: roomDetails.cameraDisabled || false,
       chatDisabled: roomDetails.chatDisabled || false,
       focusMicLockEnabled: roomDetails.focusMicLockEnabled ?? true,
-      focusChatLockEnabled: roomDetails.focusChatLockEnabled ?? true,
+      focusChatLockEnabled: roomDetails.focusChatLockEnabled ?? false,
     };
 
     // 1. Update Supabase rooms table row
