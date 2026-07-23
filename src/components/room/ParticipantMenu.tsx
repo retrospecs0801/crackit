@@ -37,6 +37,7 @@ interface ParticipantMenuProps {
   isCoOwner?: boolean;
   roomRoles?: RoomRoleState;
   onUpdateRoles?: (updater: (prev: RoomRoleState) => RoomRoleState) => void;
+  onTransferOwnership?: (newOwnerId: string, newOwnerName: string) => void;
   onClose: () => void;
   onRemoved?: () => void;
 }
@@ -53,6 +54,7 @@ export function ParticipantMenu({
   isCoOwner,
   roomRoles,
   onUpdateRoles,
+  onTransferOwnership,
   onClose,
   onRemoved,
 }: ParticipantMenuProps) {
@@ -80,7 +82,7 @@ export function ParticipantMenu({
   const viewerIsOwner = Boolean(isRoomOwner || (roomRoles && localDisplayName && roomRoles.owner === localDisplayName));
   const viewerIsCoOwner = Boolean(isCoOwner || (roomRoles && localDisplayName && roomRoles.coOwners.includes(localDisplayName)));
   const targetIsOwner = Boolean(roomRoles && roomRoles.owner && targetDisplayName === roomRoles.owner);
-  const targetIsCoOwner = Boolean(roomRoles && roomRoles.coOwners && roomRoles.coOwners.includes(targetDisplayName));
+  const targetIsCoOwner = Boolean(roomRoles && roomRoles.coOwners && (roomRoles.coOwners.includes(targetDisplayName) || roomRoles.coOwners.includes(targetUserId)));
   const isViewingSelf = Boolean((currentUserId && currentUserId === targetUserId) || (localDisplayName && localDisplayName === targetDisplayName) || (localParticipant && localParticipant.identity === targetUserId));
 
   useEffect(() => {
@@ -138,6 +140,16 @@ export function ParticipantMenu({
     if (!roomName || !currentUserId) return;
     setActionLoading(true);
     try {
+      try {
+        const payload = new TextEncoder().encode(JSON.stringify({
+          type: 'ROOM_KICK',
+          targetDisplayName,
+        }));
+        send(payload, { reliable: true });
+      } catch (e) {
+        console.error('Failed to broadcast ROOM_KICK:', e);
+      }
+
       const res = await fetch('/api/room/remove-participant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -173,20 +185,7 @@ export function ParticipantMenu({
         }),
       });
       if (res.ok) {
-        const nextRoles = {
-          owner: roomRoles?.owner || localDisplayName || null,
-          coOwners: Array.from(new Set([...(roomRoles?.coOwners || []), targetDisplayName, targetUserId])).filter(Boolean)
-        };
-        onUpdateRoles?.(() => nextRoles);
-        try {
-          const syncPayload = new TextEncoder().encode(JSON.stringify({
-            type: 'ROLE_SYNC',
-            roles: nextRoles,
-          }));
-          send(syncPayload, { reliable: true });
-        } catch (e) {
-          console.error('Failed to broadcast ROLE_SYNC after promote:', e);
-        }
+        onClose();
       } else {
         const err = await res.json();
         alert(err.error || 'Failed to promote to co-owner');
@@ -214,20 +213,7 @@ export function ParticipantMenu({
         }),
       });
       if (res.ok) {
-        const nextRoles = {
-          owner: roomRoles?.owner || localDisplayName || null,
-          coOwners: (roomRoles?.coOwners || []).filter(n => n !== targetDisplayName && n !== targetUserId)
-        };
-        onUpdateRoles?.(() => nextRoles);
-        try {
-          const syncPayload = new TextEncoder().encode(JSON.stringify({
-            type: 'ROLE_SYNC',
-            roles: nextRoles,
-          }));
-          send(syncPayload, { reliable: true });
-        } catch (e) {
-          console.error('Failed to broadcast ROLE_SYNC after demote:', e);
-        }
+        onClose();
       } else {
         const err = await res.json();
         alert(err.error || 'Failed to remove co-owner role');
@@ -257,24 +243,8 @@ export function ParticipantMenu({
         }),
       });
       if (res.ok) {
-        const oldOwnerName = roomRoles?.owner || localDisplayName || '';
-        const oldOwnerId = currentUserId || localParticipant?.identity || '';
-        const filtered = (roomRoles?.coOwners || []).filter(n => n !== targetDisplayName && n !== targetUserId);
-        const nextCoOwners = Array.from(new Set([...filtered, oldOwnerName, oldOwnerId])).filter(Boolean);
-        const nextRoles = {
-          owner: targetDisplayName,
-          coOwners: nextCoOwners,
-        };
-        onUpdateRoles?.(() => nextRoles);
-        try {
-          const syncPayload = new TextEncoder().encode(JSON.stringify({
-            type: 'ROLE_SYNC',
-            roles: nextRoles,
-          }));
-          send(syncPayload, { reliable: true });
-        } catch (e) {
-          console.error('Failed to broadcast ROLE_SYNC after transfer:', e);
-        }
+        onTransferOwnership?.(targetUserId, targetDisplayName);
+        onClose();
       } else {
         const err = await res.json();
         alert(err.error || 'Failed to transfer room ownership');
@@ -333,11 +303,12 @@ export function ParticipantMenu({
         </button>
 
         {/* Friend Request Section */}
-        {loading ? (
-          <div className="flex items-center justify-center py-2 text-text-secondary">
-            <Loader2 size={14} className="animate-spin" />
+        {loading && !isViewingSelf ? (
+          <div className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-black/5 dark:bg-white/5 animate-pulse h-[34px]">
+            <div className="w-3.5 h-3.5 rounded-full bg-text-secondary/20" />
+            <div className="w-24 h-2.5 rounded bg-text-secondary/20" />
           </div>
-        ) : (
+        ) : !isViewingSelf ? (
           <>
             {status === 'none' && currentUserId && (
               <button
@@ -380,7 +351,7 @@ export function ParticipantMenu({
               </button>
             )}
           </>
-        )}
+        ) : null}
 
         {/* Role & Room Management Options (Owner / Co-Owner) */}
         {!isViewingSelf && !confirmTransfer && !confirmDemote && (

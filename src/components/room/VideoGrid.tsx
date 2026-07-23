@@ -23,6 +23,7 @@ interface VideoGridProps {
   ownerId?: string | null;
   roomRoles?: RoomRoleState;
   onUpdateRoles?: (updater: (prev: RoomRoleState) => RoomRoleState) => void;
+  onTransferOwnership?: (newOwnerId: string, newOwnerName: string) => void;
 }
 
 function InteractiveParticipantTile({
@@ -33,6 +34,7 @@ function InteractiveParticipantTile({
   ownerId = null,
   roomRoles,
   onUpdateRoles,
+  onTransferOwnership,
 }: {
   currentUserId: string | null;
   roomName?: string;
@@ -41,6 +43,7 @@ function InteractiveParticipantTile({
   ownerId?: string | null;
   roomRoles?: RoomRoleState;
   onUpdateRoles?: (updater: (prev: RoomRoleState) => RoomRoleState) => void;
+  onTransferOwnership?: (newOwnerId: string, newOwnerName: string) => void;
 }) {
   const trackRef = useMaybeTrackRefContext();
   const pContext = useMaybeParticipantContext();
@@ -181,6 +184,7 @@ function InteractiveParticipantTile({
             isCoOwner={isCoOwner}
             roomRoles={roomRoles}
             onUpdateRoles={onUpdateRoles}
+            onTransferOwnership={onTransferOwnership}
             onClose={() => setShowMenu(false)}
           />
         </div>
@@ -198,6 +202,7 @@ export default function VideoGrid({
   ownerId = null,
   roomRoles,
   onUpdateRoles,
+  onTransferOwnership,
 }: VideoGridProps) {
   const tracks = useTracks(
     [
@@ -234,6 +239,7 @@ export default function VideoGrid({
           ownerId={ownerId}
           roomRoles={roomRoles}
           onUpdateRoles={onUpdateRoles}
+          onTransferOwnership={onTransferOwnership}
         />
       </GridLayout>
     </div>

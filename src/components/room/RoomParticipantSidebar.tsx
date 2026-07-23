@@ -18,6 +18,7 @@ interface RoomParticipantSidebarProps {
   canControlRoom?: boolean;
   roomRoles?: RoomRoleState;
   onUpdateRoles?: (updater: (prev: RoomRoleState) => RoomRoleState) => void;
+  onTransferOwnership?: (newOwnerId: string, newOwnerName: string) => void;
 }
 
 export function RoomParticipantSidebar({
@@ -31,6 +32,7 @@ export function RoomParticipantSidebar({
   canControlRoom = false,
   roomRoles,
   onUpdateRoles,
+  onTransferOwnership,
 }: RoomParticipantSidebarProps) {
   const participants = useParticipants();
   const [selectedParticipant, setSelectedParticipant] = useState<{
@@ -158,6 +160,7 @@ export function RoomParticipantSidebar({
             isCoOwner={isCoOwner}
             roomRoles={roomRoles}
             onUpdateRoles={onUpdateRoles}
+            onTransferOwnership={onTransferOwnership}
             onClose={() => setSelectedParticipant(null)}
             onRemoved={() => setSelectedParticipant(null)}
           />

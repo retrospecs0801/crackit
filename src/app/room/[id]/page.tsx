@@ -40,10 +40,14 @@ function RoomRolesSyncManager({
   roomRoles,
   onUpdateRoles,
   isOwner,
+  onTransferOwnership,
+  setSystemBubbles,
 }: {
   roomRoles: RoomRoleState;
   onUpdateRoles: (updater: (prev: RoomRoleState) => RoomRoleState) => void;
   isOwner: boolean;
+  onTransferOwnership: (newOwnerId: string, newOwnerDisplayName: string) => void;
+  setSystemBubbles: React.Dispatch<React.SetStateAction<Array<{ id: string; text: string; timestamp: number; type?: 'system' | 'log' }>>>;
 }) {
   const { message, send } = useDataChannel('room-roles');
   const room = useRoomContext();
@@ -67,15 +71,32 @@ function RoomRolesSyncManager({
           ...prev,
           coOwners: Array.from(new Set([...prev.coOwners, event.targetDisplayName, event.targetUserId])).filter(Boolean)
         }));
+        setSystemBubbles(prev => [...prev, {
+          id: `promote-${event.targetDisplayName}-${Date.now()}`,
+          text: `${event.targetDisplayName} was promoted to Co-Owner`,
+          timestamp: Date.now(),
+          type: 'system'
+        }]);
       } else if (event.type === 'ROLE_DEMOTE' && (event.targetDisplayName || event.targetUserId)) {
         onUpdateRoles(prev => ({
           ...prev,
           coOwners: prev.coOwners.filter(name => name !== event.targetDisplayName && name !== event.targetUserId)
         }));
+        setSystemBubbles(prev => [...prev, {
+          id: `demote-${event.targetDisplayName}-${Date.now()}`,
+          text: `${event.targetDisplayName} is no longer a Co-Owner`,
+          timestamp: Date.now(),
+          type: 'system'
+        }]);
       } else if (event.type === 'ROOM_TRANSFER' && (event.newOwnerDisplayName || event.targetDisplayName || event.targetUserId)) {
         const newOwner = event.newOwnerDisplayName || event.targetDisplayName || event.targetUserId;
         const oldOwner = event.oldOwnerDisplayName || prevOwnerHelper(roomRolesRef.current);
         const oldOwnerId = event.oldOwnerUserId || '';
+
+        if (event.targetUserId) {
+          onTransferOwnership(event.targetUserId, newOwner);
+        }
+
         onUpdateRoles(prev => {
           const filtered = prev.coOwners.filter(n => n !== newOwner && n !== event.targetUserId);
           const nextCoOwners = Array.from(new Set([...filtered, oldOwner, oldOwnerId])).filter(Boolean);
@@ -84,11 +105,25 @@ function RoomRolesSyncManager({
             coOwners: nextCoOwners
           };
         });
+        setSystemBubbles(prev => [...prev, {
+          id: `transfer-${newOwner}-${Date.now()}`,
+          text: `Room ownership transferred to ${newOwner}`,
+          timestamp: Date.now(),
+          type: 'system'
+        }]);
+      } else if (event.type === 'ROOM_KICK' && event.targetDisplayName) {
+        setSystemBubbles(prev => [...prev, {
+          id: `kick-${event.targetDisplayName}-${Date.now()}`,
+          text: `${event.targetDisplayName} was removed from the room`,
+          timestamp: Date.now(),
+          type: 'system'
+        }]);
       }
     } catch (e) {
       console.error('Failed to parse room-roles message:', e);
     }
-  }, [message, onUpdateRoles]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [message]);
 
   function prevOwnerHelper(current: RoomRoleState) {
     return current.owner;
@@ -275,6 +310,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [roomData, setRoomData] = useState<Room | null>(null);
   const [roomRoles, setRoomRoles] = useState<RoomRoleState>({ owner: null, coOwners: [] });
+  const hasInitializedRoles = useRef(false);
   const [isOwnerPresent, setIsOwnerPresent] = useState(true);
   const [isNotFound] = useState(false);
   const [activeTab, setActiveTab] = useState<'focus' | 'apps'>('focus');
@@ -565,7 +601,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
     return () => {
       if (abortFn) abortFn();
     };
-  }, [roomData, currentUser, livekitToken, welcomeAccepted]);
+  }, [roomData?.id, roomData?.welcomeMessageEnabled, roomData?.welcomeMessageText, currentUser, livekitToken, welcomeAccepted]);
 
   useEffect(() => {
     if (livekitToken) {
@@ -578,7 +614,7 @@ export default function RoomPage({ params }: { params: { id: string } }) {
     if (livekitToken && currentUser?.id && roomData?.id) {
       logRoomJoin(currentUser.id, roomData.id);
     }
-  }, [livekitToken, currentUser, roomData]);
+  }, [livekitToken, currentUser?.id, roomData?.id]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -591,14 +627,14 @@ export default function RoomPage({ params }: { params: { id: string } }) {
   }, []);
 
   useEffect(() => {
-    if (!roomData) return;
+    if (!roomData || hasInitializedRoles.current) return;
     let initialOwner: string | null = null;
     if (currentUser && (currentUser.id === roomData.owner_id || currentUser.id === roomData.ownerId)) {
       initialOwner = currentUser.displayName;
     } else if (roomData.owner) {
       initialOwner = roomData.owner;
     } else {
-      const creatorMember = roomData.members.find(m => m.id === roomData.owner_id || m.id === roomData.ownerId);
+      const creatorMember = roomData.members?.find(m => m.id === roomData.owner_id || m.id === roomData.ownerId);
       if (creatorMember) {
         initialOwner = creatorMember.displayName;
       } else {
@@ -607,7 +643,8 @@ export default function RoomPage({ params }: { params: { id: string } }) {
     }
     const initialCoOwners = roomData.co_owners || roomData.coOwners || [];
     setRoomRoles({ owner: initialOwner, coOwners: initialCoOwners });
-  }, [roomData?.id, roomData?.owner_id, roomData?.ownerId, roomData?.owner, roomData?.co_owners, roomData?.coOwners, currentUser?.id, currentUser?.displayName]);
+    hasInitializedRoles.current = true;
+  }, [roomData, currentUser]);
 
   const isOriginalCreator = Boolean(
     currentUser && roomData && (
@@ -631,6 +668,34 @@ export default function RoomPage({ params }: { params: { id: string } }) {
   );
 
   const canControlRoom = Boolean(isOwner || (isCoOwner && isOwnerPresent));
+
+  useEffect(() => {
+    if (!roomData?.id) return;
+    
+    setRoomData(prev => {
+      if (!prev) return prev;
+      
+      const prevCoOwners = prev.co_owners || prev.coOwners || [];
+      const sameOwner = prev.owner === roomRoles.owner;
+      const sameCoOwners = prevCoOwners.length === roomRoles.coOwners.length && 
+                           prevCoOwners.every((val: string) => roomRoles.coOwners.includes(val));
+                           
+      if (sameOwner && sameCoOwners) return prev;
+      
+      const nextRoom = { 
+        ...prev, 
+        owner: roomRoles.owner !== null ? roomRoles.owner : prev.owner,
+        co_owners: roomRoles.coOwners,
+        coOwners: roomRoles.coOwners
+      };
+      
+      try {
+        sessionStorage.setItem(`crackit_room_${prev.id}`, JSON.stringify(nextRoom));
+      } catch {}
+      
+      return nextRoom;
+    });
+  }, [roomRoles, roomData?.id]);
 
   if (isNotFound) {
     return (
@@ -711,6 +776,17 @@ export default function RoomPage({ params }: { params: { id: string } }) {
                 roomRoles={roomRoles}
                 onUpdateRoles={(updater) => setRoomRoles(updater)}
                 isOwner={isOwner}
+                onTransferOwnership={(newOwnerId, newOwnerName) => {
+                  setRoomData(prev => {
+                    if (!prev) return prev;
+                    const nextRoom = { ...prev, owner_id: newOwnerId, ownerId: newOwnerId, owner: newOwnerName };
+                    try {
+                      sessionStorage.setItem(`crackit_room_${prev.id}`, JSON.stringify(nextRoom));
+                    } catch {}
+                    return nextRoom;
+                  });
+                }}
+                setSystemBubbles={setSystemBubbles}
               />
               <RoomPresenceMonitor
                 ownerId={roomData.owner_id || roomData.ownerId}
@@ -733,6 +809,16 @@ export default function RoomPage({ params }: { params: { id: string } }) {
                 canControlRoom={canControlRoom}
                 roomRoles={roomRoles}
                 onUpdateRoles={(updater) => setRoomRoles(updater)}
+                onTransferOwnership={(newOwnerId, newOwnerName) => {
+                  setRoomData(prev => {
+                    if (!prev) return prev;
+                    const nextRoom = { ...prev, owner_id: newOwnerId, ownerId: newOwnerId, owner: newOwnerName };
+                    try {
+                      sessionStorage.setItem(`crackit_room_${prev.id}`, JSON.stringify(nextRoom));
+                    } catch {}
+                    return nextRoom;
+                  });
+                }}
               />
 
               {/* Main Column */}
@@ -763,6 +849,16 @@ export default function RoomPage({ params }: { params: { id: string } }) {
                         ownerId={roomData.owner_id || roomData.ownerId}
                         roomRoles={roomRoles}
                         onUpdateRoles={(updater) => setRoomRoles(updater)}
+                        onTransferOwnership={(newOwnerId, newOwnerName) => {
+                          setRoomData(prev => {
+                            if (!prev) return prev;
+                            const nextRoom = { ...prev, owner_id: newOwnerId, ownerId: newOwnerId, owner: newOwnerName };
+                            try {
+                              sessionStorage.setItem(`crackit_room_${prev.id}`, JSON.stringify(nextRoom));
+                            } catch {}
+                            return nextRoom;
+                          });
+                        }}
                       />
                     ) : (
                       <div className="w-full h-full rounded-xl border border-border-default bg-gradient-to-br from-surface via-canvas to-surface-raised flex flex-col items-center justify-center p-6 relative overflow-hidden select-none">
